@@ -1,0 +1,86 @@
+---
+title: 'Configure Kiosplay with environment variables'
+description: 'Configure PORT, SQLITE_PATH, UPLOAD_DIR, PUBLIC_BASE_URL, and MAX_FILE_SIZE_MB in server/.env before running Kiosplay in any environment.'
+keywords: ['kiosplay', 'configuration', 'environment variables', 'env', '.env', 'PORT', 'SQLite', 'uploads']
+---
+
+Kiosplay reads its configuration from a `.env` file located at `server/.env`. This file controls the HTTP port, where the database and uploaded files are stored, and the base URL the server uses to construct media URLs. All five variables have safe defaults for local development.
+
+## Creating the file
+
+Copy the example file before starting the server for the first time:
+
+<CodeGroup>
+
+```bash Linux / macOS
+cp .env.example server/.env
+```
+
+```bash Windows
+copy .env.example server\.env
+```
+
+</CodeGroup>
+
+The example file ships with values that work for local development without modification:
+
+```env
+PORT=3001
+SQLITE_PATH=./data/kiosko.db
+UPLOAD_DIR=./uploads
+PUBLIC_BASE_URL=http://localhost:5173
+MAX_FILE_SIZE_MB=200
+```
+
+## Variables
+
+<ParamField path="PORT" type="number" default="3001">
+  The TCP port on which the Express server listens. Change this if port 3001 is already in use, or if your deployment environment requires a specific port.
+</ParamField>
+
+<ParamField path="SQLITE_PATH" type="string" default="./data/kiosko.db">
+  Path to the SQLite database file, relative to the `server/` directory. The directory is created automatically if it does not exist. To reset the database, stop the server, delete this file, and restart — the schema is recreated on boot.
+</ParamField>
+
+<ParamField path="UPLOAD_DIR" type="string" default="./uploads">
+  Path to the directory where uploaded media files are stored, relative to the `server/` directory. Kiosplay creates one subdirectory per kiosk slug inside this folder. The directory is created automatically if it does not exist.
+</ParamField>
+
+<ParamField path="PUBLIC_BASE_URL" type="string" default="http://localhost:5173" required>
+  The public-facing base URL of the application. In development, this points to the Vite dev server so the frontend proxy can resolve `/api/*` and `/uploads/*` correctly. In production, set this to your actual domain.
+
+  <Warning>
+    Change `PUBLIC_BASE_URL` to your production domain before deploying. Leaving it as `http://localhost:5173` in production will cause media URLs to resolve incorrectly, and the player will not be able to load images or videos.
+  </Warning>
+</ParamField>
+
+<ParamField path="MAX_FILE_SIZE_MB" type="number" default="200">
+  Maximum allowed upload size in megabytes, enforced by Multer on the server. Uploads that exceed this limit are rejected with a 413 error before they reach disk.
+
+  <Tip>
+    If you are running Nginx as a reverse proxy, set its `client_max_body_size` directive to the same value or higher — for example, `client_max_body_size 250M;`. Nginx rejects oversized requests before they reach Node.js, so a lower Nginx limit will override the `MAX_FILE_SIZE_MB` setting.
+  </Tip>
+</ParamField>
+
+<ParamField path="TEMP_DIR" type="string" default="./temp">
+  Path to the directory used by the media conversion tools to store temporary files during conversion jobs, relative to the `server/` directory. Each conversion job creates a subdirectory named by its UUID. The directory is created automatically if it does not exist.
+
+  <Tip>
+    Periodically clean up `server/temp/` on busy servers. Conversion job files are not automatically deleted. You can remove them via `DELETE /api/tools/job/:jobId` or by deleting the directory contents manually.
+  </Tip>
+</ParamField>
+
+## Production example
+
+A minimal `server/.env` for a production deployment:
+
+```env
+PORT=3001
+SQLITE_PATH=./data/kiosko.db
+UPLOAD_DIR=./uploads
+TEMP_DIR=./temp
+PUBLIC_BASE_URL=https://your-domain.example.com
+MAX_FILE_SIZE_MB=200
+```
+
+Only `PUBLIC_BASE_URL` typically needs to change from the development defaults when moving to production.

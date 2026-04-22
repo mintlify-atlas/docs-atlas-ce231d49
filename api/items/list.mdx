@@ -1,0 +1,96 @@
+---
+title: "GET /api/kiosks/:id/items — List playlist items"
+description: "GET /api/kiosks/:id/items returns all playlist items for a kiosk sorted by sortOrder, including both enabled and disabled items with their full metadata."
+---
+
+Returns all playlist items belonging to a kiosk, sorted by `sortOrder` (ascending) with `id` as a tiebreaker. Unlike the public endpoint, this returns both enabled and disabled items so the admin panel can show the full playlist.
+
+## Request
+
+```bash
+GET /api/kiosks/:id/items
+```
+
+<ParamField path="id" type="integer" required>
+  The numeric ID of the kiosk whose items to retrieve.
+</ParamField>
+
+## Example
+
+```bash
+curl http://localhost:3001/api/kiosks/1/items
+```
+
+## Response
+
+Returns an array of playlist item objects.
+
+```json
+[
+  {
+    "id": 1,
+    "kioskId": 1,
+    "type": "image",
+    "filename": "banner-1705312200000-123456.jpg",
+    "originalName": "banner.jpg",
+    "filePath": "/reception/banner-1705312200000-123456.jpg",
+    "mimeType": "image/jpeg",
+    "size": 204800,
+    "durationSeconds": 8,
+    "sortOrder": 0,
+    "enabled": 1,
+    "createdAt": "2024-01-15 10:30:00",
+    "updatedAt": "2024-01-15 10:30:00"
+  }
+]
+```
+
+<ResponseField name="id" type="integer">
+  Unique identifier for the playlist item.
+</ResponseField>
+
+<ResponseField name="kioskId" type="integer">
+  ID of the kiosk this item belongs to.
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Either `"image"` or `"video"`.
+</ResponseField>
+
+<ResponseField name="filename" type="string">
+  Sanitized filename as stored on disk (includes timestamp and random suffix).
+</ResponseField>
+
+<ResponseField name="originalName" type="string">
+  The original filename provided by the user at upload time.
+</ResponseField>
+
+<ResponseField name="filePath" type="string">
+  Relative path under the uploads directory, e.g. `/reception/banner.jpg`. Prepend `/uploads` to get the full URL path.
+</ResponseField>
+
+<ResponseField name="mimeType" type="string">
+  MIME type of the file, e.g. `image/jpeg` or `video/mp4`.
+</ResponseField>
+
+<ResponseField name="size" type="integer">
+  File size in bytes.
+</ResponseField>
+
+<ResponseField name="durationSeconds" type="integer">
+  For image items: how many seconds the image is shown before advancing. Default is `5`. Ignored for video items (which play for their full duration).
+</ResponseField>
+
+<ResponseField name="sortOrder" type="integer">
+  Zero-based position in the playlist. Items are played in ascending `sortOrder` order.
+</ResponseField>
+
+<ResponseField name="enabled" type="integer">
+  `1` if the item is shown in the player, `0` if hidden.
+</ResponseField>
+
+## Error responses
+
+| Status | Body | Reason |
+|--------|------|--------|
+| `404` | `{ "error": "Kiosko no encontrado" }` | No kiosk with that ID exists |

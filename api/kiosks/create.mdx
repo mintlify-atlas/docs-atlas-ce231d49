@@ -1,0 +1,119 @@
+---
+title: 'POST /api/kiosks — Create a kiosk'
+description: 'Create a new kiosk in Kiosplay by providing a name and optional slug. Learn slug rules, reserved values, and 400 error responses.'
+keywords: ['kiosplay', 'kiosk', 'create', 'post', 'api', 'slug']
+---
+
+The create kiosk endpoint registers a new kiosk in the system. You must supply a display name; a URL slug is optional and will be automatically derived from the name if omitted. The slug must be unique across all kiosks and must not conflict with reserved system paths.
+
+## Endpoint
+
+```
+POST /api/kiosks
+```
+
+**Content-Type:** `application/json`
+
+## Request body
+
+<ParamField body="name" type="string" required>
+  Human-readable display name for the kiosk. Must be a non-empty string.
+</ParamField>
+
+<ParamField body="slug" type="string">
+  Custom URL slug for the kiosk. If omitted, the slug is automatically generated from `name`. See slug rules below.
+</ParamField>
+
+## Slug rules
+
+The final slug is produced by passing the provided slug (or the name, if no slug was given) through `slugify` with the options `{ lower: true, strict: true, locale: 'es' }`. This means:
+
+- Characters are lowercased.
+- Accented characters are transliterated (e.g., `ñ` → `n`, `á` → `a`).
+- Any character that is not a letter, digit, or hyphen is removed.
+- A slug that becomes an empty string after processing results in a `400` error.
+
+The following slugs are reserved and cannot be used:
+
+| Reserved slug |
+|---------------|
+| `api` |
+| `admin` |
+| `uploads` |
+| `static` |
+
+The slug must also be unique across all existing kiosks.
+
+## Response
+
+Returns `201 Created` with the newly created kiosk object.
+
+<ResponseField name="id" type="integer" required>
+  Auto-assigned unique identifier.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  The trimmed display name that was provided.
+</ResponseField>
+
+<ResponseField name="slug" type="string" required>
+  The final slugified value stored in the database.
+</ResponseField>
+
+<ResponseField name="enabled" type="integer" required>
+  Defaults to `1` (enabled) on creation.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string" required>
+  UTC datetime string of creation.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string" required>
+  UTC datetime string of last update (equals `createdAt` on creation).
+</ResponseField>
+
+## Error responses
+
+| Status | Condition | Error message |
+|--------|-----------|---------------|
+| `400` | `name` is missing or blank | `"El nombre es requerido"` |
+| `400` | Slug resolves to an empty string after slugification | `"Slug inválido"` |
+| `400` | Slug matches a reserved value | `"El slug \"<slug>\" está reservado"` |
+| `400` | Slug is already in use by another kiosk | `"El slug \"<slug>\" ya existe"` |
+
+## Examples
+
+<CodeGroup>
+
+```bash Auto-generated slug
+curl -X POST http://localhost:3001/api/kiosks \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Lobby Display"}'
+```
+
+```bash Custom slug
+curl -X POST http://localhost:3001/api/kiosks \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Lobby Display", "slug": "lobby"}'
+```
+
+</CodeGroup>
+
+### Success response (201)
+
+```json
+{
+  "id": 3,
+  "name": "Lobby Display",
+  "slug": "lobby-display",
+  "enabled": 1,
+  "createdAt": "2024-11-12 10:15:00",
+  "updatedAt": "2024-11-12 10:15:00"
+}
+```
+
+### Error response (400)
+
+```json
+{ "error": "El slug \"admin\" está reservado" }
+```

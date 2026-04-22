@@ -1,80 +1,140 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: 'Get started with Kiosplay in five steps'
+description: 'Clone the repository, install dependencies, configure your environment, and launch your first kiosk display — no database setup needed.'
+keywords: ['kiosplay', 'quickstart', 'install', 'setup', 'getting started', 'npm', 'dev server']
 ---
 
-## Get started in three steps
+This guide takes you from zero to a running kiosk in about five minutes. By the end you will have the admin panel open in your browser, a test kiosk created, and a fullscreen player URL ready to load on any display.
 
-Get your documentation site running locally and make your first customization.
+## Before you start
 
-### Step 1: Set up your local environment
+Make sure you have Node.js v18 LTS or later and Git installed. Run `node -v` to check. No other tools are required — Kiosplay uses SQLite, so there is no database server to install.
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+## Setup
 
-### Step 2: Deploy your changes
+<Steps>
+  <Step title="Clone the repository">
+    Clone Kiosplay and enter the project directory.
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    <CodeGroup>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    ```bash Linux / macOS
+    git clone <repo-url> kiosplay
+    cd kiosplay
+    ```
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    ```bash Windows
+    git clone <repo-url> kiosplay
+    cd kiosplay
+    ```
 
-### Step 3: Go live
+    </CodeGroup>
+  </Step>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+  <Step title="Install all dependencies">
+    A single script installs packages for the root workspace, the server, and the client in one step.
+
+    ```bash
+    npm run install:all
+    ```
+
+    This is equivalent to running `npm install` in the root, `server/`, and `client/` directories separately. You do not need to `cd` into any subdirectory.
+  </Step>
+
+  <Step title="Configure environment variables">
+    Copy the example file and place it inside `server/`.
+
+    <CodeGroup>
+
+    ```bash Linux / macOS
+    cp .env.example server/.env
+    ```
+
+    ```bash Windows
+    copy .env.example server\.env
+    ```
+
+    </CodeGroup>
+
+    The default values work for local development without any edits:
+
+    ```env
+    PORT=3001
+    SQLITE_PATH=./data/kiosko.db
+    UPLOAD_DIR=./uploads
+    PUBLIC_BASE_URL=http://localhost:5173
+    MAX_FILE_SIZE_MB=200
+    ```
+
+    See [Configure Kiosplay](/configuration) for a full description of each variable.
+  </Step>
+
+  <Step title="Start the development servers">
+    From the project root, run:
+
+    ```bash
+    npm run dev
+    ```
+
+    This uses `concurrently` to launch two processes in parallel:
+
+    | Process | URL | Description |
+    |---------|-----|-------------|
+    | Backend | `http://localhost:3001` | Express API + SQLite, auto-reloads with nodemon |
+    | Frontend | `http://localhost:5173` | Vite dev server with hot module replacement |
+
+    The Vite dev server proxies `/api/*` and `/uploads/*` to the backend, so there is no CORS configuration needed in development.
+
+    <Note>
+      The terminal prefixes server logs with `[0]` and Vite logs with `[1]`. If only one set of logs appears, check that ports 3001 and 5173 are not in use by another process.
+    </Note>
+  </Step>
+
+  <Step title="Create your first kiosk">
+    Open the admin panel at `http://localhost:5173/admin`.
+
+    1. Click **New kiosk** and give it a name (e.g. "Reception").
+    2. Kiosplay automatically generates a URL-safe slug (e.g. `recepcion`).
+    3. Open the kiosk editor and upload one or more images or videos.
+    4. Set a display duration in seconds for each image.
+
+    Your kiosk player is now live at `http://localhost:5173/recepcion` (replace `recepcion` with your slug). Open that URL in a browser to see the playlist loop in fullscreen.
+  </Step>
+</Steps>
+
+## Development URLs
+
+| URL | Description |
+|-----|-------------|
+| `http://localhost:5173/admin` | Admin panel — manage all kiosks |
+| `http://localhost:5173/admin/kiosk/:id` | Playlist editor for a specific kiosk |
+| `http://localhost:5173/:slug` | Fullscreen player (e.g. `/recepcion`) |
+| `http://localhost:3001/api/kiosks` | REST API — direct access, bypasses frontend proxy |
+
+## Available npm scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run install:all` | Install dependencies for root, server, and client |
+| `npm run dev` | Start server and client in parallel |
+| `npm run dev:server` | Start only the Express server with nodemon |
+| `npm run dev:client` | Start only the Vite frontend |
+| `npm run build` | Build the frontend for production |
+| `npm start` | Start the server in production mode |
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Environment variables" icon="sliders" href="/configuration">
+    Understand every configuration option before deploying to production.
+  </Card>
+  <Card title="Kiosk management" icon="monitor" href="/admin/kiosk-management">
+    Create kiosks, upload media, and manage playlists from the admin panel.
+  </Card>
+  <Card title="Deploy to Ubuntu" icon="server" href="/deployment/nginx-ubuntu">
+    Set up PM2, Nginx as a reverse proxy, and HTTPS with Certbot.
+  </Card>
+  <Card title="Firefox kiosk mode" icon="display" href="/deployment/kiosk-mode">
+    Configure Firefox to open a player URL in fullscreen on boot.
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

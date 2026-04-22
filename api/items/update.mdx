@@ -1,0 +1,61 @@
+---
+title: "PUT /api/items/:id — Update a playlist item"
+description: "Update a playlist item's enabled status or image display duration. Both fields are optional — omit any field you don't want to change."
+---
+
+Update a playlist item's `enabled` flag or `durationSeconds` value. Both fields are optional; omit any you don't need to change. This is used by the admin panel to toggle item visibility and adjust how long each image displays before advancing to the next item.
+
+## Request
+
+```bash
+PUT /api/items/:id
+Content-Type: application/json
+```
+
+<ParamField path="id" type="integer" required>
+  The numeric ID of the playlist item to update.
+</ParamField>
+
+<ParamField body="enabled" type="boolean">
+  Set to `true` to show the item in the player, `false` to hide it. Stored as `1` or `0`.
+</ParamField>
+
+<ParamField body="durationSeconds" type="integer">
+  For image items: how many seconds the image displays before advancing. Minimum value is `1`. Defaults to `5` when first uploaded. Has no effect on video items, which always play their full duration.
+</ParamField>
+
+## Example
+
+```bash
+curl -X PUT http://localhost:3001/api/items/5 \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": false, "durationSeconds": 10}'
+```
+
+## Response
+
+Returns the updated playlist item object.
+
+```json
+{
+  "id": 5,
+  "kioskId": 1,
+  "type": "image",
+  "filename": "banner-1705312200000-456789.jpg",
+  "originalName": "banner.jpg",
+  "filePath": "/reception/banner-1705312200000-456789.jpg",
+  "mimeType": "image/jpeg",
+  "size": 204800,
+  "durationSeconds": 10,
+  "sortOrder": 4,
+  "enabled": 0,
+  "createdAt": "2024-01-15 11:00:00",
+  "updatedAt": "2024-01-16 09:00:00"
+}
+```
+
+## Error responses
+
+| Status | Body | Reason |
+|--------|------|--------|
+| `404` | `{ "error": "Item no encontrado" }` | No item with that ID exists |

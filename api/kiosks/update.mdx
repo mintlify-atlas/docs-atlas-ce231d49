@@ -1,0 +1,65 @@
+---
+title: "PUT /api/kiosks/:id — Update a kiosk"
+description: "Update a kiosk's name, slug, or enabled status. Changing the slug automatically renames the uploads folder and updates all stored file paths."
+---
+
+Update one or more fields on an existing kiosk. All body fields are optional — omit any field you don't want to change. When a `slug` change is provided, Kiosplay automatically renames the kiosk's upload directory on disk and updates all `filePath` values in the database.
+
+## Request
+
+```bash
+PUT /api/kiosks/:id
+Content-Type: application/json
+```
+
+<ParamField path="id" type="integer" required>
+  The numeric ID of the kiosk to update.
+</ParamField>
+
+<ParamField body="name" type="string">
+  New display name for the kiosk. If omitted, the existing name is kept.
+</ParamField>
+
+<ParamField body="slug" type="string">
+  New URL slug. Processed through `slugify` with `lower: true, strict: true`. Cannot be one of the reserved values: `api`, `admin`, `uploads`, `static`. Must be unique across all kiosks.
+</ParamField>
+
+<ParamField body="enabled" type="boolean">
+  Set to `true` to activate or `false` to deactivate the kiosk. Stored as `1` or `0` in the database.
+</ParamField>
+
+## Example
+
+```bash
+curl -X PUT http://localhost:3001/api/kiosks/1 \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Main Lobby", "slug": "main-lobby", "enabled": true}'
+```
+
+## Response
+
+Returns the updated kiosk object.
+
+```json
+{
+  "id": 1,
+  "name": "Main Lobby",
+  "slug": "main-lobby",
+  "enabled": 1,
+  "createdAt": "2024-01-15 10:30:00",
+  "updatedAt": "2024-01-16 09:15:00"
+}
+```
+
+<Note>
+  When you change the `slug`, Kiosplay renames `uploads/<old-slug>/` to `uploads/<new-slug>/` on disk and updates all `filePath` values for that kiosk's items in the database automatically.
+</Note>
+
+## Error responses
+
+| Status | Body | Reason |
+|--------|------|--------|
+| `400` | `{ "error": "Slug inválido" }` | Slug resolves to an empty string after processing |
+| `400` | `{ "error": "El slug \"...\" está reservado" }` | Slug is a reserved word |
+| `400` | `{ "error": "El slug \"...\" ya existe" }` | Another kiosk already uses that slug |
+| `404` | `{ "error": "Kiosko no encontrado" }` | No kiosk with that ID exists |

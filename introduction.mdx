@@ -1,0 +1,56 @@
+---
+title: 'Kiosplay: web-based digital signage platform'
+description: 'Kiosplay lets you manage and display multimedia playlists on any screen from a browser-based admin panel — no external database or cloud service required.'
+keywords: ['kiosplay', 'digital signage', 'kiosk', 'playlist', 'admin panel', 'self-hosted']
+---
+
+Kiosplay is a self-hosted digital signage platform that runs entirely in the browser. You create kiosks in an admin panel, upload images and videos to build playlists, and point any screen at a URL to start looping content. Because everything runs on SQLite, there is no database server to install or manage.
+
+## Key features
+
+Kiosplay bundles everything you need to run a digital signage network without third-party services.
+
+- **Admin panel** — Create and manage kiosk screens, upload media, reorder playlists, and toggle items on or off without reloading the player.
+- **Fullscreen player** — Each kiosk gets a unique URL (e.g. `/recepcion`) that loops its playlist in fullscreen. Works in Firefox kiosk mode on any display.
+- **Playlist editor** — Drag to reorder items, set per-item display durations for images, enable or disable individual assets without deleting them.
+- **Built-in conversion tools** — Convert video to GIF, compress video with H.264, and convert PDFs to images — all from `/admin/tools`, powered by bundled FFmpeg.
+- **File uploads with Multer** — Supports images (JPEG, PNG, GIF, WebP) and videos (MP4, WebM, MOV, and more) up to a configurable size limit.
+
+## Tech stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18 + Vite 5 |
+| Backend | Node.js + Express 4 |
+| Database | SQLite via `better-sqlite3` |
+| Media processing | FFmpeg (bundled via `ffmpeg-static`), `pdf2pic` |
+| Process manager (production) | PM2 or systemd |
+
+## Prerequisites
+
+| Tool | Minimum version | Notes |
+|------|----------------|-------|
+| Node.js | v18 LTS | v20 LTS recommended |
+| npm | v9+ | Included with Node.js |
+| Git | Any | To clone the repository |
+
+<Note>
+Kiosplay uses SQLite, so there is no external database to install. The database file is created automatically at `server/data/kiosko.db` the first time the server starts.
+</Note>
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Clone the repo, install dependencies, and have your first kiosk running in minutes.
+  </Card>
+  <Card title="Environment variables" icon="sliders" href="/configuration">
+    Configure ports, file paths, upload limits, and your production base URL.
+  </Card>
+  <Card title="Kiosk management" icon="monitor" href="/admin/kiosk-management">
+    Create kiosks, build playlists, and manage your screens from the admin panel.
+  </Card>
+  <Card title="Built-in tools" icon="wrench" href="/tools/overview">
+    Convert and compress media files directly inside the admin panel.
+  </Card>
+</CardGroup>

@@ -1,0 +1,77 @@
+---
+title: 'Edit and reorder kiosk playlists'
+description: 'Reorder playlist items, set per-image display durations, and toggle item visibility from the kiosk edit page at /admin/kiosk/:id.'
+keywords: ['playlist', 'reorder', 'duration', 'enable', 'disable', 'kiosk', 'kiosplay', 'sortOrder']
+---
+
+The playlist editor lets you control exactly what a kiosk displays and in what order. You can drag items up or down to reorder them, set how long each image stays on screen, and hide individual items without deleting them. Changes take effect the next time the player loops around to that item.
+
+## Navigating to the playlist editor
+
+From the `/admin` dashboard, click **Edit** on any kiosk card. You are taken to `/admin/kiosk/:id`, where `:id` is the kiosk's numeric database ID. The page is divided into two sections: **Configuration** (name, slug, enabled toggle) and the **Playlist** list below it.
+
+## Working with the playlist
+
+<Steps>
+  <Step title="Open the kiosk edit page">
+    Go to `/admin` and click **Edit** on the kiosk you want to update. The playlist section shows all current items in their current `sortOrder`, with a thumbnail (or a video placeholder), the original filename, file size, type badge, and controls on the right.
+  </Step>
+  <Step title="Reorder items">
+    Use the **↑** and **↓** arrow buttons on the right of each item row to move an item up or down one position. Every move immediately calls `PUT /api/kiosks/:id/reorder` with the full updated order array, so the new sequence is persisted to the database in real time. The player reads `sortOrder` ascending, so the top item in the list plays first.
+  </Step>
+  <Step title="Set image display duration">
+    For image items, a numeric input labeled **seg** (seconds) appears on the right side of the row. Click the field, type a value, and tab or click away to save. The value is sent to `PUT /api/items/:id` as `durationSeconds`.
+
+    The minimum allowed value is **1 second**, enforced by both the client (`Math.max(1, ...)`) and the server (`Math.max(1, parseInt(...) || 5)`). Video items always play to their natural end; the duration field is not shown for them.
+  </Step>
+  <Step title="Enable or disable an item">
+    Click the toggle button (filled circle ● for enabled, empty circle ○ for disabled) to flip an item's visibility. Disabled items are still stored in the database and shown in the admin list with a dimmed style — they are simply skipped by the player. This change calls `PUT /api/items/:id` with `{ "enabled": false }` or `{ "enabled": true }`.
+
+    <Tip>
+      Disable an item instead of deleting it when you want to rotate seasonal content or temporarily remove a slide without losing the file. You can re-enable it at any time with one click.
+    </Tip>
+  </Step>
+  <Step title="Delete an item">
+    Click the **✕** button to delete an item. A confirmation dialog shows the original filename. Confirming calls `DELETE /api/items/:id`, which removes the file from disk and deletes the database record. This action cannot be undone.
+  </Step>
+</Steps>
+
+## How the player reads playlist data
+
+The public endpoint `GET /api/public/kiosk/:slug` returns the kiosk data to the player at `/<slug>`. The player receives only items where `enabled = 1`, ordered by `sortOrder` ascending. It loops through this list continuously:
+
+- **Images** display for `durationSeconds` seconds, then advance to the next item.
+- **Videos** play from start to finish at their natural duration, then advance.
+
+If the kiosk itself has `enabled = 0`, the player receives no items and displays nothing. Updating any item's `enabled` flag or `sortOrder` via the admin panel takes effect on the player's next loop — no page reload is required on the display device.
+
+## Automatic playlist refresh and offline playback
+
+The kiosk player includes two reliability features that operate without any configuration:
+
+**Playlist polling** — The player calls `GET /api/public/kiosk/:slug` every **30 seconds**. If the list of item IDs has changed since the last poll (because you added, removed, or reordered items in the admin panel), the player resets to the beginning of the new playlist automatically. No manual page reload is needed on the display device.
+
+**Offline media caching** — A service worker (`sw.js`) caches all loaded media files (`/uploads/*`) and the public API response (`/api/public/:slug`) in the browser. If the server becomes temporarily unreachable, the player continues to display previously loaded content from the cache. The service worker does not intercept admin panel requests.
+
+<Note>
+  The service worker activates only on the player pages (`/:slug`), not on `/admin`. Admin panel changes always reach the live server directly.
+</Note>
+
+## Playlist item fields reference
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `sortOrder` | integer | Position in the playlist. Lower numbers play first. |
+| `enabled` | 0 or 1 | Whether the player includes this item in its loop. |
+| `durationSeconds` | integer | Seconds an image is shown. Minimum 1. Not used for videos. |
+| `type` | `image` or `video` | Determined at upload time from the file's MIME type. |
+| `originalName` | string | The filename as uploaded, shown in the admin list. |
+
+<CardGroup cols={2}>
+  <Card title="Media upload" icon="upload" href="/admin/media-upload">
+    Upload new images and videos to add them to the playlist.
+  </Card>
+  <Card title="Kiosk management" icon="monitor" href="/admin/kiosk-management">
+    Create and configure kiosks, or delete them along with all their files.
+  </Card>
+</CardGroup>

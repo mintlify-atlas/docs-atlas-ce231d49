@@ -1,0 +1,52 @@
+---
+title: "PUT /api/kiosks/:id/reorder — Reorder playlist items"
+description: "Set the play order for a kiosk's playlist by providing an ordered array of item IDs. Items are assigned sortOrder values starting at 0."
+---
+
+Reorders a kiosk's playlist by accepting an array of item IDs in the desired play sequence. Items are assigned `sortOrder` values of `0`, `1`, `2`, ... matching their position in the provided array. The player always reads items in ascending `sortOrder` order.
+
+## Request
+
+```bash
+PUT /api/kiosks/:id/reorder
+Content-Type: application/json
+```
+
+<ParamField path="id" type="integer" required>
+  The numeric ID of the kiosk whose playlist to reorder.
+</ParamField>
+
+<ParamField body="order" type="integer[]" required>
+  An array of playlist item IDs in the new desired play order. Every item in the array is assigned a `sortOrder` equal to its index (0-based). Items not included in the array keep their current `sortOrder`.
+</ParamField>
+
+## Example
+
+```bash
+curl -X PUT http://localhost:3001/api/kiosks/1/reorder \
+  -H "Content-Type: application/json" \
+  -d '{"order": [3, 1, 5, 2, 4]}'
+```
+
+This assigns:
+- Item `3` → `sortOrder: 0` (plays first)
+- Item `1` → `sortOrder: 1`
+- Item `5` → `sortOrder: 2`
+- Item `2` → `sortOrder: 3`
+- Item `4` → `sortOrder: 4` (plays last)
+
+## Response
+
+```json
+{ "ok": true }
+```
+
+<Tip>
+  Include all item IDs in the array to set a complete, deterministic order. Items omitted from the array are not updated and may sort inconsistently relative to the reordered items.
+</Tip>
+
+## Error responses
+
+| Status | Body | Reason |
+|--------|------|--------|
+| `400` | `{ "error": "Se requiere un array \"order\"" }` | The `order` field is missing or not an array |

@@ -1,0 +1,128 @@
+---
+title: 'Reset and manage the Kiosplay SQLite database'
+description: 'Kiosplay stores all data in a single SQLite file at server/data/kiosko.db. Learn how to back it up, inspect its schema, and fully reset it.'
+---
+
+Kiosplay stores all kiosk configuration and playlist metadata in a single SQLite file. Because the entire database is one file, management tasks — backup, reset, and inspection — require no special tooling beyond basic file system operations.
+
+## Database location
+
+The database file is created automatically the first time the server starts:
+
+```
+server/data/kiosko.db
+```
+
+The path is controlled by the `SQLITE_PATH` environment variable in `server/.env`. If the `data/` directory does not exist, the server creates it on startup.
+
+## Reliability settings
+
+The server enables two SQLite pragmas immediately after opening the database connection (`server/db.js`):
+
+| Pragma | Value | Effect |
+|---|---|---|
+| `journal_mode` | `WAL` | Write-Ahead Logging improves read/write concurrency and reduces lock contention |
+| `foreign_keys` | `ON` | Enforces referential integrity; deleting a kiosk automatically cascades to its items |
+
+## Schema
+
+### `kiosks` table
+
+Each row represents one kiosk screen or display point.
+
+| Column | Type | Description |
+|---|---|---|
+| `id` | INTEGER | Primary key, auto-incremented |
+| `name` | TEXT | Human-readable label (e.g., "Recepción") |
+| `slug` | TEXT | URL-safe identifier, unique (e.g., "recepcion") |
+| `enabled` | INTEGER | `1` = active and visible in the player, `0` = disabled |
+| `createdAt` | TEXT | ISO datetime, set automatically on insert |
+| `updatedAt` | TEXT | ISO datetime, updated on each change |
+
+### `kiosk_items` table
+
+Each row is one media item (image or video) in a kiosk's playlist.
+
+| Column | Type | Description |
+|---|---|---|
+| `id` | INTEGER | Primary key, auto-incremented |
+| `kioskId` | INTEGER | Foreign key → `kiosks.id`; cascades on delete |
+| `type` | TEXT | `'image'` or `'video'` (enforced by a CHECK constraint) |
+| `filename` | TEXT | Filename as stored on disk |
+| `originalName` | TEXT | Original filename as uploaded by the user |
+| `filePath` | TEXT | Relative path from the uploads directory |
+| `mimeType` | TEXT | MIME type of the file (e.g., `image/jpeg`) |
+| `size` | INTEGER | File size in bytes |
+| `durationSeconds` | INTEGER | Seconds an image is displayed; defaults to `5` |
+| `sortOrder` | INTEGER | Position in the playlist; lower numbers appear first |
+| `enabled` | INTEGER | `1` = shown in the player, `0` = hidden |
+| `createdAt` | TEXT | ISO datetime, set automatically on insert |
+| `updatedAt` | TEXT | ISO datetime, updated on each change |
+
+<Note>
+  The schema is created using `CREATE TABLE IF NOT EXISTS`, so restarting the server after a reset always produces a clean, correct schema without any migration step.
+</Note>
+
+## Back up the database
+
+Because the database is a single file, a backup is a simple file copy. Stop the server first to ensure no writes are in progress, then copy the file to a safe location.
+
+```bash
+cp server/data/kiosko.db server/data/kiosko.db.backup
+```
+
+To restore, stop the server, replace `kiosko.db` with your backup copy, and restart.
+
+## Reset the database
+
+<Warning>
+  Resetting the database permanently deletes all kiosk records and playlist metadata. This action is irreversible. Back up the file first if you may need to recover the data.
+</Warning>
+
+<Steps>
+
+  <Step title="Stop the server">
+    Stop any running Kiosplay processes before deleting the database file. If using PM2:
+
+    ```bash
+    pm2 stop kiosko
+    ```
+
+    If running in development:
+
+    Press `Ctrl+C` in the terminal where `npm run dev` is running.
+  </Step>
+
+  <Step title="Delete the database file">
+    ```bash
+    rm server/data/kiosko.db
+    ```
+  </Step>
+
+  <Step title="(Optional) Clear uploaded media files">
+    The database reset removes all records, but the media files on disk are not automatically deleted. To also remove all uploaded content:
+
+    ```bash
+    rm -rf server/uploads/*
+    ```
+
+    <Warning>
+      This permanently deletes all uploaded images and videos. It cannot be undone.
+    </Warning>
+  </Step>
+
+  <Step title="Restart the server">
+    Start Kiosplay again. The server detects that `kiosko.db` is missing and recreates the file with a fresh, empty schema.
+
+    ```bash
+    # Development
+    npm run dev
+
+    # Production with PM2
+    pm2 start kiosko
+    ```
+
+    You should see the server start without errors. The admin panel will show an empty kiosk list.
+  </Step>
+
+</Steps>

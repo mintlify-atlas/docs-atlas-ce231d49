@@ -1,0 +1,136 @@
+---
+title: 'Convert PDF pages to images with Kiosplay'
+description: 'Render each page of a PDF as a full-resolution PNG or JPEG using the Kiosplay PDF→Images tool, powered by ImageMagick and Ghostscript.'
+keywords: ['pdf to images', 'pdf to png', 'pdf to jpg', 'imagemagick', 'ghostscript', 'kiosplay tools']
+---
+
+The PDF→Images tool renders every page of an uploaded PDF as a separate image file. Each page is output at 1920 pixels wide at your chosen DPI and saved as either PNG or JPEG. The resulting images can be downloaded individually or added directly to a kiosk playlist, making it straightforward to turn presentation slides or multi-page documents into signage content.
+
+<Warning>
+  This tool requires **ImageMagick** and **Ghostscript** to be installed on the server. These are not bundled with Kiosplay. If they are missing, the conversion will fail with an error mentioning `magick` or `gs`. Follow the installation instructions below before using this tool.
+</Warning>
+
+## System requirements
+
+The PDF→Images tool is powered by the `pdf2pic` library, which calls ImageMagick's `convert` command, which in turn uses Ghostscript to interpret PDF files.
+
+| Dependency    | Purpose | Bundled |
+|---------------|---------|---------|
+| ImageMagick   | Renders PDF pages to raster images | No — must be installed manually |
+| Ghostscript   | Decodes and rasterizes PDF content | No — must be installed manually |
+| FFmpeg        | Not used by this tool | Yes (`ffmpeg-static`) |
+
+### Install ImageMagick and Ghostscript
+
+<CodeGroup>
+
+```bash Ubuntu / Debian
+sudo apt-get install imagemagick ghostscript
+```
+
+```text Windows
+1. Download and install Ghostscript (64-bit):
+   https://www.ghostscript.com/releases/gsdnld.html
+
+2. Download and install ImageMagick:
+   https://imagemagick.org/script/download.php#windows
+   Check "Install legacy utilities (e.g. convert)" during setup.
+
+3. Restart your terminal or the Kiosplay server process.
+```
+
+</CodeGroup>
+
+#### Fix the ImageMagick PDF policy on Ubuntu
+
+Ubuntu's default ImageMagick installation includes a security policy that blocks PDF processing. After installing, apply this fix:
+
+```bash
+sudo sed -i 's|<policy domain="coder" rights="none" pattern="PDF" />|<policy domain="coder" rights="read|write" pattern="PDF" />|' /etc/ImageMagick-6/policy.xml
+```
+
+If you prefer to edit the file manually, open `/etc/ImageMagick-6/policy.xml` and change:
+
+```xml
+<policy domain="coder" rights="none" pattern="PDF" />
+```
+
+to:
+
+```xml
+<policy domain="coder" rights="read|write" pattern="PDF" />
+```
+
+Restart the Kiosplay server after making this change.
+
+## Workflow
+
+<Steps>
+  <Step title="Open the tools panel">
+    Navigate to `/admin/tools` in the Kiosplay admin interface and select **PDF→Images**.
+  </Step>
+  <Step title="Upload a PDF">
+    Choose the PDF file you want to convert. Files up to 500 MB are accepted.
+  </Step>
+  <Step title="Set DPI and format">
+    Select a DPI value between 72 and 300, and choose **PNG** or **JPEG** as the output format. PNG is selected by default and is lossless; JPEG produces smaller files at the cost of some detail.
+  </Step>
+  <Step title="Convert">
+    Click **Convert**. The server processes every page and returns one image file per page.
+  </Step>
+  <Step title="Download or add to playlist">
+    Download individual page images, or use **Add to kiosk** to call `POST /api/tools/add-to-kiosk` for each file you want in the playlist.
+  </Step>
+</Steps>
+
+## Parameters
+
+| Parameter | Type    | Minimum | Maximum | Default | Description |
+|-----------|---------|---------|---------|---------|-------------|
+| `dpi`     | integer | `72`    | `300`   | `150`   | Render resolution in dots per inch. Higher values produce sharper images and larger files. |
+| `format`  | string  | —       | —       | `png`   | Output format: `png` (lossless) or `jpg` (lossy, smaller). |
+
+The output width is fixed at **1920 pixels** regardless of DPI. DPI affects the rendering quality and sharpness of text and graphics within that fixed canvas, not the pixel dimensions of the output file.
+
+Output files are named `page.1.png`, `page.2.png`, etc. (or `.jpg` if JPEG was selected), one per page.
+
+## API reference
+
+**Endpoint:** `POST /api/tools/pdf-to-images`  
+**Content-Type:** `multipart/form-data`
+
+| Field    | Required | Type   | Notes |
+|----------|----------|--------|-------|
+| `file`   | Yes      | File   | The source PDF file. Maximum 500 MB. |
+| `dpi`    | No       | number | Render DPI. Clamped to 72–300. Defaults to `150`. |
+| `format` | No       | string | `png` or `jpg`. Defaults to `png`. |
+
+**Successful response:**
+
+```json
+{
+  "jobId": "550e8400-e29b-41d4-a716-446655440000",
+  "files": [
+    {
+      "page": 1,
+      "filename": "page.1.png",
+      "url": "/api/tools/result/550e8400-e29b-41d4-a716-446655440000/page.1.png",
+      "size": 524288,
+      "sizeLabel": "512.0 KB"
+    },
+    {
+      "page": 2,
+      "filename": "page.2.png",
+      "url": "/api/tools/result/550e8400-e29b-41d4-a716-446655440000/page.2.png",
+      "size": 487424,
+      "sizeLabel": "476.0 KB"
+    }
+  ]
+}
+```
+
+Each entry in `files` corresponds to one page from the source PDF. Pages are ordered by their position in the document starting at `1`.
+
+<Tip>
+  For presentation slides intended for signage display, 150 DPI PNG is a good starting point. Increase to 300 DPI if text appears blurry at 150, or switch to JPEG at 150 DPI if file sizes are too large for your storage constraints.
+</Tip>

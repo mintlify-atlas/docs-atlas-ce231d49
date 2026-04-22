@@ -1,0 +1,133 @@
+---
+title: 'Troubleshoot common Kiosplay startup issues'
+description: 'Fix port conflicts, missing processes, large file upload failures, Vite warnings, and PDF conversion errors when running Kiosplay.'
+---
+
+When Kiosplay fails to start or behaves unexpectedly, most issues fall into a small set of known categories. Work through the relevant accordion below to diagnose and resolve the problem.
+
+<AccordionGroup>
+
+  <Accordion title="EADDRINUSE: address already in use :::3001" icon="triangle-exclamation">
+
+    <Warning>
+      This error means port 3001 is already occupied by a previous server process that did not shut down cleanly. You must kill that process before starting Kiosplay again.
+    </Warning>
+
+    Find and terminate the process holding port 3001, then restart the server with `npm run dev`.
+
+    <CodeGroup>
+
+    ```bash Windows
+    # Step 1: find the PID using port 3001
+    netstat -ano | findstr :3001
+
+    # Step 2: kill the process (replace 12345 with the PID from the output above)
+    taskkill /F /PID 12345
+    ```
+
+    ```bash Linux / Mac
+    lsof -ti:3001 | xargs kill -9
+    ```
+
+    </CodeGroup>
+
+    After the process is terminated, run `npm run dev` to start Kiosplay normally.
+
+  </Accordion>
+
+  <Accordion title="Server starts but the web interface does not load" icon="circle-question">
+
+    Kiosplay requires two processes running simultaneously: the Express backend and the Vite frontend. If you see the server output but the browser shows nothing, the frontend process is likely not running.
+
+    <Note>
+      Running `npm run dev` from the project root starts both processes together using `concurrently`. In the combined output, lines prefixed with `[0]` belong to the Express server and lines prefixed with `[1]` belong to Vite. If you only see `[0]` lines, the frontend did not start.
+    </Note>
+
+    Make sure you run `npm run dev` from the **project root**, not from inside the `server/` or `client/` directories. If you need to start them separately, use `npm run dev:server` and `npm run dev:client` in two terminals.
+
+  </Accordion>
+
+  <Accordion title="Large file upload failures (files over ~100 MB)" icon="arrow-up-from-bracket">
+
+    Upload failures for large files are typically caused by a size limit set in one of two places.
+
+    **1. Application limit — `MAX_FILE_SIZE_MB`**
+
+    Check the value of `MAX_FILE_SIZE_MB` in `server/.env`. The default is `200`.
+
+    ```env server/.env
+    MAX_FILE_SIZE_MB=200
+    ```
+
+    Increase this value if you need to upload files larger than the current limit, then restart the server.
+
+    **2. Nginx limit — `client_max_body_size` (production only)**
+
+    If you are running behind Nginx, the `client_max_body_size` directive in your Nginx site configuration must be equal to or larger than `MAX_FILE_SIZE_MB`. A mismatch causes Nginx to reject the request before it reaches the application.
+
+    ```nginx /etc/nginx/sites-available/kiosplay
+    server {
+        # Must be >= MAX_FILE_SIZE_MB in server/.env
+        client_max_body_size 250M;
+        ...
+    }
+    ```
+
+    After updating Nginx configuration, reload it with `sudo nginx -t && sudo systemctl reload nginx`.
+
+  </Accordion>
+
+  <Accordion title="Vite CJS Node API deprecation warning" icon="circle-info">
+
+    This message appears in the terminal output when starting the development server:
+
+    ```
+    The CJS build of Vite's Node API is deprecated. See https://vitejs.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+    ```
+
+    <Note>
+      This is a warning, not an error. It does not affect the functionality of the development server or the production build. You can safely ignore it.
+    </Note>
+
+    If you want to suppress the warning, update `vite.config.js` to use ES module syntax (`"type": "module"` in `client/package.json` and rename the config to `vite.config.mjs`). This is optional and has no impact on Kiosplay's operation.
+
+  </Accordion>
+
+  <Accordion title="PDF conversion errors (ImageMagick / Ghostscript)" icon="file-pdf">
+
+    The **PDF → Images** conversion tool requires both ImageMagick and Ghostscript to be installed on the host system. If either is missing, the conversion fails with:
+
+    ```
+    Asegúrate de tener ImageMagick y Ghostscript instalados
+    ```
+
+    Install the required tools for your operating system:
+
+    <CodeGroup>
+
+    ```bash Ubuntu / Debian
+    sudo apt-get install imagemagick ghostscript
+
+    # ImageMagick's default security policy blocks PDF processing.
+    # Enable it by updating the policy file:
+    sudo sed -i 's|<policy domain="coder" rights="none" pattern="PDF" />|<policy domain="coder" rights="read|write" pattern="PDF" />|' /etc/ImageMagick-6/policy.xml
+    ```
+
+    ```bash Windows
+    # 1. Download and install Ghostscript (64-bit):
+    #    https://www.ghostscript.com/releases/gsdnld.html
+    #
+    # 2. Download and install ImageMagick:
+    #    https://imagemagick.org/script/download.php#windows
+    #    Check "Install legacy utilities" during installation.
+    #
+    # 3. Restart your terminal after both installs complete.
+    ```
+
+    </CodeGroup>
+
+    For full installation instructions, see [PDF to Images tool setup](/tools/pdf-to-images).
+
+  </Accordion>
+
+</AccordionGroup>

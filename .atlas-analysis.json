@@ -1,28 +1,11 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
-  "name": "Kiosplay",
+  "projectType": "saas",
+  "projectName": "Kiosplay",
+  "projectDescription": "A web-based digital signage platform for managing multimedia playlists across multiple kiosk screens, with an admin panel, media uploads, and a fullscreen player.",
   "theme": "almond",
-  "colors": {
-    "primary": "#aebd57",
-    "light": "#26272c",
-    "dark": "#dbdbdd"
-  },
-  "favicon": "/favicon.png",
-  "logo": {
-    "light": "https://media.brand.dev/dfc2a072-a1d5-40a3-8128-4cd5a6b970d4.svg",
-    "dark": "https://media.brand.dev/dfc2a072-a1d5-40a3-8128-4cd5a6b970d4.svg"
-  },
-  "navbar": {
-    "primary": {
-      "type": "github",
-      "href": "https://github.com/raulbellosom/kiosplay"
-    }
-  },
-  "footer": {
-    "socials": {
-      "github": "https://github.com/raulbellosom/kiosplay"
-    }
-  },
+  "primaryColor": "#aebd57",
+  "lightColor": "#26272c",
+  "darkColor": "#dbdbdd",
   "navigation": {
     "tabs": [
       {
@@ -72,5 +55,34 @@
         ]
       }
     ]
-  }
+  },
+  "keyFeatures": [
+    "Multi-kiosk management from a single admin dashboard",
+    "Drag-and-drop playlist editor with image and video support",
+    "Bulk media upload with automatic file organization per kiosk",
+    "Fullscreen kiosk player with looping playlist playback",
+    "Built-in media tools: Video-to-GIF conversion, video compression, and PDF-to-images",
+    "SQLite-backed storage with no external database required",
+    "Production-ready with Nginx reverse proxy and PM2 process management",
+    "Firefox kiosk mode support for dedicated display screens"
+  ],
+  "publicApiSurface": [
+    "GET /api/kiosks",
+    "POST /api/kiosks",
+    "GET /api/kiosks/:id",
+    "PUT /api/kiosks/:id",
+    "DELETE /api/kiosks/:id",
+    "GET /api/kiosks/:id/items",
+    "POST /api/kiosks/:id/items/upload",
+    "PUT /api/kiosks/:id/reorder",
+    "PUT /api/items/:id",
+    "DELETE /api/items/:id",
+    "GET /api/public/kiosk/:slug",
+    "POST /api/tools/video-to-gif",
+    "POST /api/tools/compress-video",
+    "POST /api/tools/pdf-to-images",
+    "POST /api/tools/add-to-kiosk",
+    "GET /api/tools/result/:jobId/:filename",
+    "DELETE /api/tools/job/:jobId"
+  ]
 }

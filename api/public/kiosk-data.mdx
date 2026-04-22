@@ -1,0 +1,68 @@
+---
+title: "GET /api/public/kiosk/:slug — Fetch kiosk player data"
+description: "Public endpoint used by the kiosk player to fetch a kiosk's details and its enabled playlist items, ordered by sortOrder ascending."
+---
+
+This is the public endpoint consumed by the Kiosplay player at `/:slug`. It returns the kiosk's metadata together with all **enabled** playlist items sorted by `sortOrder`. No authentication is required — this endpoint is intentionally open so browsers can load it in kiosk mode.
+
+## Request
+
+```bash
+GET /api/public/kiosk/:slug
+```
+
+<ParamField path="slug" type="string" required>
+  The URL slug of the kiosk (e.g. `reception`, `lobby`). Slugs are configured in the admin panel.
+</ParamField>
+
+## Example
+
+```bash
+curl http://localhost:3001/api/public/kiosk/reception
+```
+
+## Response
+
+Returns a kiosk object with an embedded `items` array containing only enabled items.
+
+```json
+{
+  "id": 1,
+  "name": "Reception",
+  "slug": "reception",
+  "enabled": 1,
+  "createdAt": "2024-01-15 10:30:00",
+  "updatedAt": "2024-01-15 10:30:00",
+  "items": [
+    {
+      "id": 1,
+      "kioskId": 1,
+      "type": "image",
+      "filename": "welcome-1705312200000-111.jpg",
+      "originalName": "welcome.jpg",
+      "filePath": "/reception/welcome-1705312200000-111.jpg",
+      "mimeType": "image/jpeg",
+      "size": 512000,
+      "durationSeconds": 8,
+      "sortOrder": 0,
+      "enabled": 1,
+      "createdAt": "2024-01-15 10:35:00",
+      "updatedAt": "2024-01-15 10:35:00"
+    }
+  ]
+}
+```
+
+<ResponseField name="items" type="object[]">
+  Array of enabled playlist items, sorted by `sortOrder` ascending (then `id` ascending as a tiebreaker). Disabled items are excluded. To retrieve all items including disabled ones, use `GET /api/kiosks/:id/items`.
+</ResponseField>
+
+<Note>
+  Media files are served from `/uploads/<slug>/<filename>`. To construct the full URL for a file, prepend your server's base URL to `filePath`: e.g. `http://localhost:3001/uploads` + `/reception/welcome.jpg`.
+</Note>
+
+## Error responses
+
+| Status | Body | Reason |
+|--------|------|--------|
+| `404` | `{ "error": "Kiosko no encontrado" }` | No kiosk with that slug exists |

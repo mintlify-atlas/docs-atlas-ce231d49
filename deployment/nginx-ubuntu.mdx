@@ -1,0 +1,196 @@
+---
+title: 'Deploy Kiosplay on Ubuntu with Nginx and PM2'
+description: 'Step-by-step guide to deploying Kiosplay on an Ubuntu server using Node.js 20 LTS, PM2 for process management, Nginx as a reverse proxy, and Certbot for HTTPS.'
+keywords: ['ubuntu', 'nginx', 'pm2', 'deployment', 'reverse proxy', 'certbot', 'https', 'systemd', 'node.js']
+---
+
+This guide covers a complete production deployment of Kiosplay on Ubuntu, from installing Node.js through enabling HTTPS. The application runs as a managed process behind an Nginx reverse proxy, so it restarts automatically after reboots or crashes and traffic reaches it through a standard HTTP/HTTPS port.
+
+<Steps>
+  <Step title="Install Node.js v20 LTS">
+    Add the NodeSource repository and install Node.js v20 LTS.
+
+    ```bash
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+    ```
+
+    Verify the installation:
+
+    ```bash
+    node --version   # should print v20.x.x
+    npm --version
+    ```
+  </Step>
+
+  <Step title="Clone the repository">
+    Clone the repo to `/opt/kiosko` and take ownership of the directory so you can run npm commands without `sudo`.
+
+    ```bash
+    cd /opt
+    sudo git clone <your-repo-url> kiosko
+    sudo chown -R $USER:$USER /opt/kiosko
+    ```
+  </Step>
+
+  <Step title="Install dependencies and build the frontend">
+    Install packages for all three package.json files (root, server, client) and then compile the React/Vite frontend.
+
+    ```bash
+    cd /opt/kiosko
+    npm run install:all
+    npm run build
+    ```
+
+    After `npm run build` completes, the compiled frontend assets are in `client/dist/`. Express will serve them automatically on startup.
+  </Step>
+
+  <Step title="Configure environment variables">
+    Copy the example env file and open it for editing.
+
+    ```bash
+    cp .env.example server/.env
+    nano server/.env
+    ```
+
+    At minimum, set `PORT` and `PUBLIC_BASE_URL`:
+
+    ```ini
+    PORT=3001
+    SQLITE_PATH=./data/kiosko.db
+    UPLOAD_DIR=./uploads
+    PUBLIC_BASE_URL=https://your-domain.example.com
+    MAX_FILE_SIZE_MB=200
+    ```
+
+    <Warning>
+    Set `PUBLIC_BASE_URL` to your real public domain, not `http://localhost:5173`. The default value is only correct for local development.
+    </Warning>
+  </Step>
+
+  <Step title="Set up PM2 to manage the server process">
+    Install PM2 globally and start the Kiosplay Express server. Run these commands from the project root (`/opt/kiosko`).
+
+    ```bash
+    sudo npm install -g pm2
+
+    pm2 start server/app.js --name kiosko
+    pm2 save
+    pm2 startup
+    ```
+
+    After running `pm2 startup`, PM2 prints a command you must copy and run to register the startup hook with systemd. It looks like:
+
+    ```bash
+    sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u youruser --hp /home/youruser
+    ```
+
+    **Common PM2 commands:**
+
+    ```bash
+    pm2 status           # Show all managed processes and their state
+    pm2 logs kiosko      # Stream live logs for the kiosko process
+    pm2 restart kiosko   # Restart the process (e.g. after config changes)
+    pm2 stop kiosko      # Stop the process without removing it
+    ```
+  </Step>
+
+  <Step title="Configure Nginx as a reverse proxy">
+    Create a new Nginx site configuration file.
+
+    ```bash
+    sudo nano /etc/nginx/sites-available/kiosplay
+    ```
+
+    Paste the following server block. Replace `your-domain.example.com` with your actual domain.
+
+    ```nginx
+    server {
+        listen 80;
+        server_name your-domain.example.com;
+
+        # Must be equal to or greater than MAX_FILE_SIZE_MB in server/.env
+        client_max_body_size 250M;
+
+        location / {
+            proxy_pass http://127.0.0.1:3001;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_read_timeout 120s;
+        }
+
+        # Extended timeout for large media file uploads and downloads
+        location /uploads/ {
+            proxy_pass http://127.0.0.1:3001;
+            proxy_read_timeout 300s;
+        }
+    }
+    ```
+
+    <Warning>
+    `client_max_body_size` must be set to at least the same value as `MAX_FILE_SIZE_MB` in `server/.env`, or Nginx will reject large file uploads with a `413 Request Entity Too Large` error before the request even reaches Express.
+    </Warning>
+
+    Enable the site and reload Nginx:
+
+    ```bash
+    sudo ln -s /etc/nginx/sites-available/kiosplay /etc/nginx/sites-enabled/
+    sudo nginx -t && sudo systemctl reload nginx
+    ```
+  </Step>
+
+  <Step title="Enable HTTPS with Certbot">
+    Install Certbot and the Nginx plugin, then obtain and install a certificate. Certbot automatically updates the Nginx config to redirect HTTP to HTTPS.
+
+    ```bash
+    sudo apt install certbot python3-certbot-nginx
+    sudo certbot --nginx -d your-domain.example.com
+    ```
+
+    Certbot registers a systemd timer to auto-renew the certificate. You can verify it is active with:
+
+    ```bash
+    sudo systemctl status certbot.timer
+    ```
+  </Step>
+</Steps>
+
+## Systemd alternative to PM2
+
+If you prefer to manage the process with systemd directly instead of PM2, create a service unit file:
+
+<Note>
+Both PM2 and systemd provide automatic restarts and boot persistence. PM2 adds a web dashboard (`pm2 monit`) and log aggregation that can be useful when managing multiple Node.js applications on the same server. For a single-app server, systemd is equally reliable with no extra dependencies.
+</Note>
+
+<CodeGroup>
+
+```ini /etc/systemd/system/kiosplay.service
+[Unit]
+Description=Kiosplay Digital Signage Server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/kiosko/server
+ExecStart=/usr/bin/node app.js
+Restart=on-failure
+RestartSec=5
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash Enable and start the service
+sudo systemctl daemon-reload
+sudo systemctl enable kiosplay
+sudo systemctl start kiosplay
+sudo systemctl status kiosplay
+```
+
+</CodeGroup>

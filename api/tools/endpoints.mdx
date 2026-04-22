@@ -1,0 +1,180 @@
+---
+title: "Media conversion tool API endpoints"
+description: "REST endpoints for converting videos to GIF, compressing video files, converting PDFs to images, and managing temporary conversion job files."
+---
+
+Kiosplay exposes a set of server-side media conversion endpoints under `/api/tools`. These power the admin Tools panel at `/admin/tools` but can also be called directly. Converted files are stored in a temporary directory (`server/temp/`) and identified by a `jobId`. After downloading or adding files to a kiosk, clean up the temp files by deleting the job.
+
+<Note>
+  FFmpeg is bundled via `ffmpeg-static` and requires no system installation. The PDF-to-images endpoint requires **ImageMagick and Ghostscript** to be installed separately. See [PDF to Images](/tools/pdf-to-images) for installation instructions.
+</Note>
+
+---
+
+## POST /api/tools/video-to-gif
+
+Convert a video clip to an animated GIF.
+
+**Request:** `multipart/form-data`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | file | Yes | Video file to convert |
+| `start` | float | No | Start time in seconds (default: `0`, min: `0`) |
+| `duration` | float | No | Clip length in seconds (default: `10`, range: `1–60`) |
+| `fps` | integer | No | Frames per second (default: `10`, range: `1–30`) |
+| `scale` | integer | No | Output width in pixels (default: `480`, range: `120–1280`) |
+
+```bash
+curl -X POST http://localhost:3001/api/tools/video-to-gif \
+  -F "file=@/path/to/clip.mp4" \
+  -F "start=5" \
+  -F "duration=10" \
+  -F "fps=15" \
+  -F "scale=640"
+```
+
+**Response:**
+```json
+{
+  "jobId": "a1b2c3d4-...",
+  "filename": "output.gif",
+  "url": "/api/tools/result/a1b2c3d4-.../output.gif",
+  "size": 2097152,
+  "sizeLabel": "2.0 MB"
+}
+```
+
+---
+
+## POST /api/tools/compress-video
+
+Compress a video using H.264 encoding.
+
+**Request:** `multipart/form-data`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | file | Yes | Video file to compress |
+| `quality` | string | No | `high` (CRF 20), `medium` (CRF 28, default), `low` (CRF 36) |
+| `maxWidth` | integer | No | Maximum output width in pixels. `0` = no resize (default) |
+
+```bash
+curl -X POST http://localhost:3001/api/tools/compress-video \
+  -F "file=@/path/to/video.mp4" \
+  -F "quality=medium" \
+  -F "maxWidth=1280"
+```
+
+**Response:**
+```json
+{
+  "jobId": "a1b2c3d4-...",
+  "filename": "compressed.mp4",
+  "url": "/api/tools/result/a1b2c3d4-.../compressed.mp4",
+  "originalSize": 52428800,
+  "newSize": 15728640,
+  "reduction": 70,
+  "originalLabel": "50.0 MB",
+  "newLabel": "15.0 MB"
+}
+```
+
+---
+
+## POST /api/tools/pdf-to-images
+
+Convert a PDF's pages to individual images.
+
+**Request:** `multipart/form-data`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | file | Yes | PDF file to convert |
+| `dpi` | integer | No | Output resolution (default: `150`, range: `72–300`) |
+| `format` | string | No | `png` (default) or `jpg` |
+
+```bash
+curl -X POST http://localhost:3001/api/tools/pdf-to-images \
+  -F "file=@/path/to/document.pdf" \
+  -F "dpi=150" \
+  -F "format=png"
+```
+
+**Response:**
+```json
+{
+  "jobId": "a1b2c3d4-...",
+  "files": [
+    {
+      "page": 1,
+      "filename": "page.1.png",
+      "url": "/api/tools/result/a1b2c3d4-.../page.1.png",
+      "size": 1048576,
+      "sizeLabel": "1.0 MB"
+    },
+    {
+      "page": 2,
+      "filename": "page.2.png",
+      "url": "/api/tools/result/a1b2c3d4-.../page.2.png",
+      "size": 983040,
+      "sizeLabel": "960.0 KB"
+    }
+  ]
+}
+```
+
+---
+
+## GET /api/tools/result/:jobId/:filename
+
+Download a converted file from a completed job.
+
+```bash
+curl -O http://localhost:3001/api/tools/result/a1b2c3d4-.../output.gif
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `jobId` | The job ID returned by a conversion endpoint |
+| `filename` | The filename returned by a conversion endpoint |
+
+Returns the file as a download. Returns `404` if the file does not exist.
+
+---
+
+## POST /api/tools/add-to-kiosk
+
+Add a converted file directly to a kiosk's playlist without downloading it first.
+
+**Request:** `application/json`
+
+```bash
+curl -X POST http://localhost:3001/api/tools/add-to-kiosk \
+  -H "Content-Type: application/json" \
+  -d '{"jobId": "a1b2c3d4-...", "filename": "output.gif", "kioskId": 1}'
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `jobId` | string | Yes | Job ID from the conversion response |
+| `filename` | string | Yes | Filename from the conversion response |
+| `kioskId` | integer | Yes | ID of the destination kiosk |
+
+Returns the newly created playlist item object (same shape as the items API).
+
+---
+
+## DELETE /api/tools/job/:jobId
+
+Delete all temporary files for a completed job.
+
+```bash
+curl -X DELETE http://localhost:3001/api/tools/job/a1b2c3d4-...
+```
+
+**Response:** `{ "ok": true }`
+
+<Tip>
+  Call this endpoint after you have downloaded or added to kiosk all files from a job. Temp files are not automatically cleaned up and can accumulate in `server/temp/`.
+</Tip>

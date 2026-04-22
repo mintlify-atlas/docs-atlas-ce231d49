@@ -1,0 +1,44 @@
+---
+title: 'Built-in media conversion tools in Kiosplay'
+description: 'Convert videos to GIFs, compress video files, and extract PDF pages as images directly inside the Kiosplay admin panel — no external services required.'
+keywords: ['tools', 'media conversion', 'video', 'gif', 'pdf', 'compress', 'kiosplay']
+---
+
+Kiosplay ships with three media conversion tools accessible directly from the admin panel at `/admin/tools`. You can convert video clips to animated GIFs, reduce video file sizes with H.264 compression, and extract individual PDF pages as PNG or JPEG images — all without leaving the interface. After conversion, each file can be downloaded or added straight to a kiosk playlist.
+
+<Note>
+  FFmpeg is bundled via `ffmpeg-static` and requires no manual installation. The Video→GIF and Compress Video tools work out of the box on all supported platforms.
+</Note>
+
+<Warning>
+  The PDF→Images tool depends on **ImageMagick** and **Ghostscript**, which are not bundled with Kiosplay. You must install them separately on the server before that tool will function. See the [PDF→Images guide](/tools/pdf-to-images) for platform-specific install instructions.
+</Warning>
+
+## Available tools
+
+<CardGroup cols={3}>
+  <Card title="Video to GIF" icon="film" href="/tools/video-to-gif">
+    Convert a clip from any video file into an animated GIF, with control over start time, duration, frame rate, and output width.
+  </Card>
+  <Card title="Compress video" icon="compress" href="/tools/compress-video">
+    Re-encode a video with H.264 at one of three quality presets to reduce file size before adding it to a playlist.
+  </Card>
+  <Card title="PDF to images" icon="file-pdf" href="/tools/pdf-to-images">
+    Render every page of a PDF as a separate PNG or JPEG image at up to 300 DPI and 1920 px wide.
+  </Card>
+</CardGroup>
+
+## How converted files are handled
+
+After a conversion job finishes, the server returns a `jobId` and a download URL for each output file. You can either:
+
+- **Download the file** directly from the tools panel.
+- **Add the file to a kiosk playlist** by calling `POST /api/tools/add-to-kiosk` with the `jobId`, `filename`, and `kioskId`. The file is copied from the temporary directory into the kiosk's uploads folder and inserted into its playlist at the end of the sort order.
+
+Temporary files are stored in `server/temp/<jobId>/`. To free up disk space, delete a job's files with:
+
+```http
+DELETE /api/tools/job/:jobId
+```
+
+You can also remove the directory manually. Temporary files are not cleaned up automatically on a schedule, so periodic maintenance is recommended on busy servers.

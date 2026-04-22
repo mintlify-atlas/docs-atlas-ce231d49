@@ -1,0 +1,102 @@
+---
+title: 'Reduce video file sizes with H.264 compression'
+description: 'Use the Kiosplay Compress Video tool to re-encode any video with libx264 at three CRF quality presets, with an optional maximum width to reduce resolution.'
+keywords: ['compress video', 'h264', 'crf', 'ffmpeg', 'reduce file size', 'kiosplay tools']
+---
+
+The Compress Video tool re-encodes a video using the `libx264` codec with AAC audio and outputs the result in the same container format as the source file. It is the fastest way to shrink oversized video files before adding them to a kiosk playlist. After compression, the response includes the original and new file sizes along with the percentage reduction, so you can confirm the result before committing the file to a playlist.
+
+<Note>
+  FFmpeg is bundled via `ffmpeg-static`. No additional software is needed to use this tool.
+</Note>
+
+## Workflow
+
+<Steps>
+  <Step title="Open the tools panel">
+    Navigate to `/admin/tools` in the Kiosplay admin interface and select **Compress Video**.
+  </Step>
+  <Step title="Upload a video file">
+    Choose the video you want to compress. Files up to 500 MB are accepted.
+  </Step>
+  <Step title="Choose a quality preset">
+    Select **High**, **Medium**, or **Low**. See the quality preset table below for the CRF value and expected trade-offs of each option. Medium is selected by default.
+  </Step>
+  <Step title="Set an optional maximum width">
+    Enter a pixel width in the **Max width** field to cap the output resolution. Leave it at `0` to keep the original dimensions.
+  </Step>
+  <Step title="Compress">
+    Click **Compress**. The server re-encodes the file and returns a download URL along with file size statistics.
+  </Step>
+  <Step title="Download or add to playlist">
+    Download the compressed file directly, or click **Add to kiosk** to insert it into a kiosk playlist via `POST /api/tools/add-to-kiosk`.
+  </Step>
+</Steps>
+
+## Quality presets
+
+The tool maps the selected quality level to an H.264 Constant Rate Factor (CRF) value. CRF controls the trade-off between quality and file size: **lower values produce higher quality and larger files; higher values produce smaller files with more visible compression artifacts**.
+
+| Preset   | CRF value | When to use |
+|----------|-----------|-------------|
+| `high`   | 20        | When visual fidelity matters most — minimal artifacts, largest output. |
+| `medium` | 28        | A balanced default suitable for most signage content. |
+| `low`    | 36        | Maximum size reduction — noticeable quality loss, smallest output. |
+
+The `-preset fast` flag is used in all cases to keep encoding time reasonable on typical server hardware.
+
+## Encoding options
+
+The tool always applies the following FFmpeg settings:
+
+- **Video codec:** `libx264`
+- **Audio codec:** `aac`
+- **`-movflags +faststart`:** moves the MP4 metadata to the start of the file so it can begin playing before fully downloading.
+- **Output extension:** matches the source file (`.mp4`, `.webm`, `.mov`, etc.).
+
+When **Max width** is set to a value greater than `0`, a scale filter is applied:
+
+```text
+scale='min(${maxWidth},iw)':-2
+```
+
+This only downscales — if the source video is narrower than `maxWidth`, the dimensions are left unchanged. The `-2` on the height axis ensures the output dimensions remain divisible by 2, which is required by `libx264`.
+
+## Parameters
+
+| Parameter  | Type    | Default | Notes |
+|------------|---------|---------|-------|
+| `quality`  | string  | `medium` | `high`, `medium`, or `low`. Maps to CRF 20, 28, or 36 respectively. |
+| `maxWidth` | integer | `0`      | Maximum output width in pixels. Set to `0` to skip resizing. |
+
+## API reference
+
+**Endpoint:** `POST /api/tools/compress-video`  
+**Content-Type:** `multipart/form-data`
+
+| Field      | Required | Type   | Notes |
+|------------|----------|--------|-------|
+| `file`     | Yes      | File   | The source video file. Maximum 500 MB. |
+| `quality`  | No       | string | `high`, `medium`, or `low`. Defaults to `medium`. |
+| `maxWidth` | No       | number | Maximum output width in pixels. Defaults to `0` (no resize). |
+
+**Successful response:**
+
+```json
+{
+  "jobId": "550e8400-e29b-41d4-a716-446655440000",
+  "filename": "compressed.mp4",
+  "url": "/api/tools/result/550e8400-e29b-41d4-a716-446655440000/compressed.mp4",
+  "originalSize": 52428800,
+  "newSize": 18874368,
+  "reduction": 64,
+  "originalLabel": "50.0 MB",
+  "newLabel": "18.0 MB"
+}
+```
+
+The `reduction` field is the percentage decrease in file size, rounded to the nearest integer. A value of `64` means the output is 64 % smaller than the input.
+
+<Tip>
+  If you only need to shrink dimensions without re-encoding quality settings, set `quality` to `medium` (the default) and provide a `maxWidth`. The resolution change alone often accounts for the majority of the size reduction.
+</Tip>

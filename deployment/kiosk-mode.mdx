@@ -1,0 +1,129 @@
+---
+title: 'Run Kiosplay in Firefox full-screen kiosk mode'
+description: 'Launch Firefox in full-screen kiosk mode pointed at a Kiosplay player URL, with autostart on boot and screen saver tips for Raspberry Pi and Ubuntu.'
+keywords: ['kiosk mode', 'firefox', 'fullscreen', 'raspberry pi', 'ubuntu', 'autostart', 'digital signage', 'DISPLAY']
+---
+
+Once Kiosplay is running on your server, the kiosk player is a plain URL that any browser can load. Firefox ships with a built-in `--kiosk` flag that hides all browser chrome—tabs, address bar, toolbars—and forces the page into true fullscreen. This makes it the recommended choice for unattended display hardware running Linux, including Raspberry Pi and Ubuntu kiosk terminals.
+
+## Find your player URL
+
+Each kiosk in Kiosplay has a unique slug that forms its player URL:
+
+```
+http://your-server/:slug
+```
+
+For example, if your server is at `https://signage.example.com` and the kiosk slug is `lobby`, the player URL is `https://signage.example.com/lobby`.
+
+To find or change a kiosk's slug, navigate to `/admin`, locate the kiosk in the list, and open its editor. The slug field is shown at the top of the playlist editor.
+
+## Launch Firefox in kiosk mode
+
+<Steps>
+  <Step title="Verify the player URL loads correctly">
+    Before configuring autostart, confirm the URL works in a normal browser window. Navigate to `http://your-server/:slug` and check that the playlist begins playing. If the page is blank or shows an error, the kiosk may be disabled or the slug may be wrong.
+  </Step>
+
+  <Step title="Launch Firefox with the --kiosk flag">
+    Use the appropriate command for your environment:
+
+    <CodeGroup>
+
+    ```bash Standard Linux / Ubuntu desktop
+    firefox --kiosk https://your-domain.example.com/your-slug
+    ```
+
+    ```bash Headless or embedded display (set DISPLAY first)
+    DISPLAY=:0 firefox --kiosk https://your-domain.example.com/your-slug
+    ```
+
+    ```bash Firefox already running (force a new instance)
+    firefox --no-remote --kiosk https://your-domain.example.com/your-slug
+    ```
+
+    </CodeGroup>
+
+    The `DISPLAY=:0` variant is needed when running the command over SSH or from a startup script where no display environment variable is set. The `--no-remote` flag prevents the new invocation from attaching to an existing Firefox process, which would ignore the `--kiosk` argument.
+  </Step>
+
+  <Step title="Disable screen saver and power management">
+    Kiosk displays must stay on continuously. By default, most Linux desktop environments and X11 sessions will blank the screen or suspend the display after a period of inactivity.
+
+    <Tip>
+    Run these commands before starting Firefox, or add them to the same startup script. On Raspberry Pi OS (Bookworm and later), the Wayfire compositor uses `wlr-randr` or the GNOME settings daemon instead of `xset`—check your compositor's documentation for the equivalent power management settings.
+    </Tip>
+
+    ```bash
+    # Disable X11 screen saver and DPMS power management
+    xset s off
+    xset s noblank
+    xset -dpms
+    ```
+  </Step>
+
+  <Step title="Configure autostart on boot">
+    Choose the approach that matches your environment.
+
+    <CodeGroup>
+
+    ```bash Desktop autostart (GNOME / XFCE / LXDE)
+    # Create an autostart entry in the user's session
+    mkdir -p ~/.config/autostart
+
+    cat > ~/.config/autostart/kiosplay.desktop << 'EOF'
+    [Desktop Entry]
+    Type=Application
+    Name=Kiosplay
+    Exec=bash -c "xset s off; xset s noblank; xset -dpms; firefox --kiosk https://your-domain.example.com/your-slug"
+    X-GNOME-Autostart-enabled=true
+    EOF
+    ```
+
+    ```ini systemd user service
+    # ~/.config/systemd/user/kiosplay-browser.service
+    [Unit]
+    Description=Kiosplay Firefox Kiosk
+    After=graphical-session.target
+
+    [Service]
+    Environment=DISPLAY=:0
+    ExecStartPre=/usr/bin/xset s off
+    ExecStartPre=/usr/bin/xset s noblank
+    ExecStartPre=/usr/bin/xset -dpms
+    ExecStart=/usr/bin/firefox --kiosk https://your-domain.example.com/your-slug
+    Restart=on-failure
+    RestartSec=5
+
+    [Install]
+    WantedBy=graphical-session.target
+    ```
+
+    ```bash Raspberry Pi /etc/rc.local (legacy)
+    # Add before the final "exit 0" line in /etc/rc.local
+    su - pi -c "DISPLAY=:0 xset s off && DISPLAY=:0 xset -dpms && DISPLAY=:0 firefox --kiosk https://your-domain.example.com/your-slug &"
+    ```
+
+    </CodeGroup>
+
+    To enable the systemd user service:
+
+    ```bash
+    systemctl --user daemon-reload
+    systemctl --user enable kiosplay-browser.service
+    systemctl --user start kiosplay-browser.service
+    ```
+  </Step>
+</Steps>
+
+## Quick reference
+
+| Command | When to use |
+|---------|-------------|
+| `firefox --kiosk <url>` | Standard desktop Linux with an active X11 or Wayland session |
+| `DISPLAY=:0 firefox --kiosk <url>` | SSH session or startup script without a display variable |
+| `firefox --no-remote --kiosk <url>` | Firefox is already open and you need a second kiosk instance |
+
+<Tip>
+On Raspberry Pi, consider installing `unclutter` to hide the mouse cursor on the kiosk display: `sudo apt install unclutter`. Add `unclutter -idle 0.1 -root &` to your startup script before the Firefox command.
+</Tip>

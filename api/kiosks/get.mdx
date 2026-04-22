@@ -1,0 +1,65 @@
+---
+title: "GET /api/kiosks/:id — Retrieve a single kiosk"
+description: "GET /api/kiosks/:id returns the full kiosk object — name, slug, enabled status, and timestamps — or a 404 if no kiosk exists with that ID."
+---
+
+Use this endpoint to retrieve the details of a specific kiosk by its numeric `id`. The response includes the kiosk's name, slug, enabled status, and timestamps.
+
+## Request
+
+```bash
+GET /api/kiosks/:id
+```
+
+<ParamField path="id" type="integer" required>
+  The numeric ID of the kiosk to retrieve.
+</ParamField>
+
+## Example
+
+```bash
+curl http://localhost:3001/api/kiosks/1
+```
+
+## Response
+
+```json
+{
+  "id": 1,
+  "name": "Reception",
+  "slug": "reception",
+  "enabled": 1,
+  "createdAt": "2024-01-15 10:30:00",
+  "updatedAt": "2024-01-15 10:30:00"
+}
+```
+
+<ResponseField name="id" type="integer">
+  Unique numeric identifier for the kiosk.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Human-readable display name of the kiosk.
+</ResponseField>
+
+<ResponseField name="slug" type="string">
+  URL-safe identifier used to access the kiosk player at `/:slug`.
+</ResponseField>
+
+<ResponseField name="enabled" type="integer">
+  `1` if the kiosk is active, `0` if disabled.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO datetime string when the kiosk was created.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO datetime string of the last modification.
+</ResponseField>
+
+## Error responses
+
+| Status | Body | Reason |
+|--------|------|--------|
+| `404` | `{ "error": "Kiosko no encontrado" }` | No kiosk exists with that ID |

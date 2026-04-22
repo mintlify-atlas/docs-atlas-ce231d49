@@ -1,0 +1,99 @@
+---
+title: 'Build Kiosplay for production deployment'
+description: 'Compile the React/Vite frontend and serve the full Kiosplay stack—API, media, and SPA—from a single Express process on port 3001.'
+keywords: ['production build', 'vite', 'express', 'npm run build', 'npm start', 'SPA', 'static files']
+---
+
+Before deploying Kiosplay to a server, you need to compile the React/Vite frontend into static files and configure the Express backend to serve everything from a single process. After the build, one `npm start` command brings up the API, media uploads, and the admin panel on port 3001—no separate frontend server required.
+
+## How the production server works
+
+In development, Vite runs its own dev server on port 5173 and proxies `/api/*` and `/uploads/*` to Express on port 3001. In production that split disappears: `npm run build` compiles the frontend to `client/dist/`, and Express serves those static files directly alongside the API.
+
+The middleware registration order in `server/app.js` determines how each request is handled:
+
+1. `/uploads/*` — static media files served from the `UPLOAD_DIR` folder with a 24-hour `Cache-Control` header for large video files.
+2. `/api/*` — all REST API routes (kiosks, items, public player data, tools).
+3. `client/dist/` — the compiled React app served as static assets.
+4. `*` catch-all — any path that does not match the above is answered with `client/dist/index.html` so the React Router SPA handles client-side navigation.
+
+## Production URLs
+
+Once the server is running, every part of the application is reachable on the same host and port:
+
+| URL | Description |
+|-----|-------------|
+| `:3001/admin` | Admin dashboard — manage kiosks and playlists |
+| `:3001/admin/kiosk/:id` | Playlist editor for a specific kiosk |
+| `:3001/:slug` | Fullscreen player (e.g. `/reception`, `/lobby`) |
+| `:3001/api/*` | REST API endpoints |
+| `:3001/uploads/*` | Uploaded media files (images, videos) |
+
+## Build and start
+
+<Steps>
+  <Step title="Install all dependencies">
+    Run the root-level install script to install packages for the root, `server/`, and `client/` directories in one command.
+
+    ```bash
+    npm run install:all
+    ```
+  </Step>
+
+  <Step title="Configure the environment file">
+    Copy the example environment file and set `PUBLIC_BASE_URL` to your real server URL. The default `http://localhost:5173` value is only correct for local development.
+
+    ```bash
+    cp .env.example server/.env
+    ```
+
+    Edit `server/.env` and update at minimum:
+
+    ```ini
+    PORT=3001
+    PUBLIC_BASE_URL=https://your-domain.example.com
+    MAX_FILE_SIZE_MB=200
+    ```
+
+    | Variable | Description |
+    |----------|-------------|
+    | `PORT` | Port Express listens on (default `3001`) |
+    | `SQLITE_PATH` | Path to the SQLite database file |
+    | `UPLOAD_DIR` | Directory where uploaded media is stored |
+    | `PUBLIC_BASE_URL` | Full public URL of the server — set this to your real domain in production |
+    | `MAX_FILE_SIZE_MB` | Maximum upload size in megabytes |
+  </Step>
+
+  <Step title="Build the frontend">
+    Compile the React/Vite app to `client/dist/`. This step only processes the frontend; the Express server is not started yet.
+
+    ```bash
+    npm run build
+    ```
+
+    Under the hood this runs `npm --prefix client run build`, which invokes `vite build` inside the `client/` directory.
+  </Step>
+
+  <Step title="Start the production server">
+    Start Express in production mode. The server detects `client/dist/` and automatically enables static file serving and the SPA fallback.
+
+    ```bash
+    npm start
+    ```
+
+    You should see output similar to:
+
+    ```
+    Servidor corriendo en http://localhost:3001
+    Archivos multimedia en: /opt/kiosko/server/uploads
+    ```
+  </Step>
+</Steps>
+
+<Note>
+The SQLite database file (`server/data/kiosko.db`) and the uploads directory (`server/uploads/`) are created automatically on first start. You do not need to run any database migrations or create directories manually.
+</Note>
+
+## Verifying the build
+
+Open a browser and navigate to `http://your-server:3001/admin`. If the admin dashboard loads, the build is working correctly. To confirm the API is also responding, check `http://your-server:3001/api/kiosks`—it should return a JSON array (empty `[]` on a fresh install).

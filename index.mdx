@@ -1,97 +1,63 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Kiosplay: Digital Signage Management Platform"
+description: "Kiosplay is a self-hosted digital signage platform. Create kiosk screens, upload media, build playlists, and loop content on any display — no cloud required."
 ---
 
-## Setting up
+Kiosplay is a web-based digital signage platform that makes it easy to control what plays on your display screens. Create kiosks, upload images and videos, arrange playlists, and deploy a fullscreen looping player — all without any external database or complex infrastructure.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Set up Kiosplay and create your first kiosk in under 5 minutes.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Admin Guide" icon="display" href="/admin/kiosk-management">
+    Learn how to create kiosks, manage playlists, and upload media.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Media Tools" icon="wand-magic-sparkles" href="/tools/overview">
+    Convert videos to GIF, compress video files, and convert PDFs to images.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Explore the REST API for automating kiosk and playlist management.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## How it works
 
-Everything you need to create world-class documentation.
+Kiosplay has three main parts: the **admin panel** where you configure kiosks and playlists, the **kiosk player** that displays content fullscreen in a browser, and the **REST API** that powers both.
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+<Steps>
+  <Step title="Create a kiosk">
+    In the admin panel at `/admin`, create a new kiosk with a name and URL slug (e.g., `reception`, `lobby`).
+  </Step>
+  <Step title="Upload media">
+    Upload images and videos to the kiosk's playlist. Supported formats include JPEG, PNG, GIF, WebP, MP4, WebM, and more.
+  </Step>
+  <Step title="Arrange the playlist">
+    Drag items to reorder them, toggle visibility on individual items, and set how long each image displays.
+  </Step>
+  <Step title="Launch the player">
+    Open `/:slug` (e.g., `/reception`) in a browser or point Firefox kiosk mode at that URL for a dedicated screen.
+  </Step>
+</Steps>
 
-## Need inspiration?
+## Key features
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<CardGroup cols={2}>
+  <Card title="Multi-screen management" icon="monitor">
+    Manage unlimited kiosk screens from a single dashboard, each with its own independent playlist.
+  </Card>
+  <Card title="Drag-and-drop playlists" icon="list-ol">
+    Reorder playlist items visually. Changes take effect immediately on active players.
+  </Card>
+  <Card title="Bulk media upload" icon="upload">
+    Upload up to 20 files at once. Files are automatically organized per kiosk in isolated folders.
+  </Card>
+  <Card title="No database server required" icon="database">
+    Kiosplay uses SQLite — a single file database that requires zero configuration or maintenance.
+  </Card>
+  <Card title="Built-in media tools" icon="screwdriver-wrench">
+    Convert videos to animated GIFs, compress video files, and extract PDF pages as images.
+  </Card>
+  <Card title="Firefox kiosk mode ready" icon="firefox">
+    Point Firefox `--kiosk` mode at any kiosk URL for a dedicated, full-screen display screen.
+  </Card>
+</CardGroup>

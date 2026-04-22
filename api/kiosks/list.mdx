@@ -1,0 +1,76 @@
+---
+title: 'GET /api/kiosks — List all kiosks'
+description: 'GET /api/kiosks returns every kiosk as a JSON array sorted newest-first. Each object includes id, name, slug, enabled status, and timestamps.'
+keywords: ['kiosplay', 'kiosks', 'list', 'api']
+---
+
+The list kiosks endpoint returns every kiosk in the system as a JSON array, sorted newest-first. Use this endpoint to populate kiosk selector UIs or to audit all configured displays.
+
+## Endpoint
+
+```
+GET /api/kiosks
+```
+
+## Parameters
+
+This endpoint accepts no query, path, or body parameters.
+
+## Response
+
+Returns an array of kiosk objects ordered by `createdAt` descending.
+
+<ResponseField name="id" type="integer" required>
+  Unique auto-incrementing identifier for the kiosk.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Human-readable display name of the kiosk.
+</ResponseField>
+
+<ResponseField name="slug" type="string" required>
+  URL-safe identifier used in the public player URL and as the uploads folder name.
+</ResponseField>
+
+<ResponseField name="enabled" type="integer" required>
+  Whether the kiosk is active. `1` = enabled, `0` = disabled.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string" required>
+  ISO 8601 datetime string when the kiosk was created, in UTC.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string" required>
+  ISO 8601 datetime string when the kiosk was last modified, in UTC.
+</ResponseField>
+
+## Example
+
+```bash
+curl http://localhost:3001/api/kiosks
+```
+
+### Response
+
+```json
+[
+  {
+    "id": 2,
+    "name": "Lobby Display",
+    "slug": "lobby-display",
+    "enabled": 1,
+    "createdAt": "2024-11-10 14:32:00",
+    "updatedAt": "2024-11-10 14:32:00"
+  },
+  {
+    "id": 1,
+    "name": "Main Entrance",
+    "slug": "main-entrance",
+    "enabled": 1,
+    "createdAt": "2024-11-09 09:00:00",
+    "updatedAt": "2024-11-09 09:00:00"
+  }
+]
+```
+
+An empty array `[]` is returned when no kiosks have been created yet.

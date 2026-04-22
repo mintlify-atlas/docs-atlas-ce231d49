@@ -1,0 +1,92 @@
+---
+title: 'Convert video clips to animated GIFs'
+description: 'Use the Kiosplay Video→GIF tool to extract a timed clip from any uploaded video and export it as a looping animated GIF with a high-quality palette.'
+keywords: ['video to gif', 'animated gif', 'ffmpeg', 'convert', 'kiosplay tools']
+---
+
+The Video→GIF tool extracts a segment from a video file and converts it into a looping animated GIF using FFmpeg's Lanczos-scaled, palette-optimized pipeline. The result is suitable for display on kiosk playlists that require lightweight looping visuals. File size grows quickly with duration, frame rate, and width — the parameter limits are there to keep outputs practical.
+
+<Note>
+  FFmpeg is bundled via `ffmpeg-static`. No additional software is needed to use this tool.
+</Note>
+
+## Workflow
+
+<Steps>
+  <Step title="Open the tools panel">
+    Navigate to `/admin/tools` in the Kiosplay admin interface and select **Video→GIF**.
+  </Step>
+  <Step title="Upload a video file">
+    Choose any video file up to 500 MB. The file is stored temporarily in `server/temp/<jobId>/` on the server.
+  </Step>
+  <Step title="Set conversion parameters">
+    Adjust the start time, duration, frame rate, and output width using the form controls. See the parameter reference below for the accepted range of each value.
+  </Step>
+  <Step title="Convert">
+    Click **Convert**. The server processes the file with FFmpeg and returns a download URL when complete.
+  </Step>
+  <Step title="Download or add to playlist">
+    Download the resulting GIF directly, or click **Add to kiosk** to call `POST /api/tools/add-to-kiosk` and insert the file into a kiosk playlist.
+  </Step>
+</Steps>
+
+## Parameters
+
+| Parameter  | Type    | Minimum | Maximum | Default | Description |
+|------------|---------|---------|---------|---------|-------------|
+| `start`    | float   | `0`     | —       | `0`     | Start position in the source video, in seconds. |
+| `duration` | float   | `1`     | `60`    | `10`    | Length of the clip to convert, in seconds. |
+| `fps`      | integer | `1`     | `30`    | `10`    | Frames per second in the output GIF. |
+| `scale`    | integer | `120`   | `1280`  | `480`   | Output width in pixels. Height scales proportionally. |
+
+### How parameters affect output size and quality
+
+- **`duration`** is the largest driver of file size. A 60-second GIF at default settings will be roughly six times larger than a 10-second one.
+- **`fps`** controls smoothness. Values above 15 produce noticeably smoother motion but increase file size proportionally. For largely static content, 8–10 fps is usually sufficient.
+- **`scale`** sets the pixel width. Halving the width (for example, from 480 to 240) reduces file size by roughly 75 % because frame area decreases by a factor of four.
+- **`start`** does not affect file size — it only shifts where in the source video the clip begins.
+
+## FFmpeg filter chain
+
+The conversion uses the following FFmpeg video filter chain, which produces a per-clip optimized color palette for significantly better GIF quality compared to a fixed palette:
+
+```text
+fps=${fps},scale=${scale}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse
+```
+
+- `fps=...` — resamples the video to the target frame rate before any other processing.
+- `scale=${scale}:-1:flags=lanczos` — resizes to the target width while preserving aspect ratio, using the Lanczos algorithm for sharp downscaling.
+- `split[s0][s1]` — duplicates the filtered stream so that one copy can be used to generate a palette and the other to apply it.
+- `palettegen` — builds a 256-color palette optimized for the specific frames in this clip.
+- `paletteuse` — dithers and maps each frame against that palette, producing much cleaner output than a global palette would.
+
+The output GIF is set to loop indefinitely (`-loop 0`).
+
+## API reference
+
+**Endpoint:** `POST /api/tools/video-to-gif`  
+**Content-Type:** `multipart/form-data`
+
+| Field      | Required | Type   | Notes |
+|------------|----------|--------|-------|
+| `file`     | Yes      | File   | The source video file. Maximum 500 MB. |
+| `start`    | No       | number | Seconds from the beginning of the video. Defaults to `0`. |
+| `duration` | No       | number | Clip length in seconds. Clamped to 1–60. Defaults to `10`. |
+| `fps`      | No       | number | Output frame rate. Clamped to 1–30. Defaults to `10`. |
+| `scale`    | No       | number | Output width in pixels. Clamped to 120–1280. Defaults to `480`. |
+
+**Successful response:**
+
+```json
+{
+  "jobId": "550e8400-e29b-41d4-a716-446655440000",
+  "filename": "output.gif",
+  "url": "/api/tools/result/550e8400-e29b-41d4-a716-446655440000/output.gif",
+  "size": 2097152,
+  "sizeLabel": "2.0 MB"
+}
+```
+
+<Tip>
+  To add the result to a kiosk playlist without downloading, pass the returned `jobId` and `filename` to `POST /api/tools/add-to-kiosk` along with the target `kioskId`.
+</Tip>

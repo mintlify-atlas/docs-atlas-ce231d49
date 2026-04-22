@@ -1,0 +1,45 @@
+---
+title: "DELETE /api/items/:id — Remove a playlist item"
+description: "Permanently delete a playlist item and its media file from disk using DELETE /api/items/:id. This action removes the file immediately and cannot be undone."
+---
+
+Deletes a single playlist item by ID and removes its corresponding file from the `uploads/` directory on disk. The deletion is permanent — the file cannot be recovered after this call.
+
+<Warning>
+  This endpoint deletes the media file from disk. Ensure you no longer need the file before calling this endpoint.
+</Warning>
+
+## Request
+
+```bash
+DELETE /api/items/:id
+```
+
+<ParamField path="id" type="integer" required>
+  The numeric ID of the playlist item to delete.
+</ParamField>
+
+## Example
+
+```bash
+curl -X DELETE http://localhost:3001/api/items/5
+```
+
+## Response
+
+```json
+{ "ok": true }
+```
+
+## What gets deleted
+
+| Item | Details |
+|------|---------|
+| Database record | Removed from the `kiosk_items` table |
+| Media file | The file at `uploads/<slug>/<filename>` is deleted from disk |
+
+## Error responses
+
+| Status | Body | Reason |
+|--------|------|--------|
+| `404` | `{ "error": "Item no encontrado" }` | No item with that ID exists |

@@ -1,0 +1,65 @@
+---
+title: 'Kiosplay REST API — base URL, errors, and endpoints'
+description: 'Explore the Kiosplay REST API: base URL, response format, error handling, HTTP status codes, and a full index of available endpoints.'
+keywords: ['kiosplay', 'api', 'rest', 'reference', 'overview']
+---
+
+The Kiosplay API is a JSON REST API that powers the Kiosplay digital signage platform. All endpoints are unauthenticated — no API keys or tokens are required. The API exposes resources for managing kiosks, playlist items, media conversion tools, and a public player data feed.
+
+## Base URL
+
+In local development the server runs on port `3001`:
+
+```
+http://localhost:3001
+```
+
+All endpoints are prefixed with `/api`. For example, to list all kiosks you call `http://localhost:3001/api/kiosks`.
+
+## Authentication
+
+This is an open API. No authentication is required for any endpoint.
+
+## Request format
+
+Endpoints that accept a request body expect either JSON (`Content-Type: application/json`) or `multipart/form-data` for file uploads. The required content type is noted on each endpoint page.
+
+## Response format
+
+All responses are JSON. Successful responses return the requested resource or a confirmation object. Error responses always follow this shape:
+
+```json
+{ "error": "Human-readable error message" }
+```
+
+## HTTP status codes
+
+| Code | Meaning |
+|------|---------|
+| `200` | OK — request succeeded, resource returned |
+| `201` | Created — resource created successfully |
+| `400` | Bad Request — invalid or missing parameters |
+| `404` | Not Found — resource does not exist |
+| `500` | Internal Server Error — unexpected server-side failure |
+
+## Endpoint index
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/kiosks` | [List all kiosks](/api/kiosks/list) |
+| `POST` | `/api/kiosks` | [Create a kiosk](/api/kiosks/create) |
+| `GET` | `/api/kiosks/:id` | [Get a kiosk](/api/kiosks/get) |
+| `PUT` | `/api/kiosks/:id` | [Update a kiosk](/api/kiosks/update) |
+| `DELETE` | `/api/kiosks/:id` | [Delete a kiosk](/api/kiosks/delete) |
+| `GET` | `/api/kiosks/:id/items` | [List playlist items](/api/items/list) |
+| `POST` | `/api/kiosks/:id/items/upload` | [Upload playlist items](/api/items/upload) |
+| `PUT` | `/api/items/:id` | [Update a playlist item](/api/items/update) |
+| `DELETE` | `/api/items/:id` | [Delete a playlist item](/api/items/delete) |
+| `PUT` | `/api/kiosks/:id/reorder` | [Reorder playlist](/api/items/reorder) |
+| `GET` | `/api/public/kiosk/:slug` | [Get public kiosk data](/api/public/kiosk-data) |
+| `POST` | `/api/tools/video-to-gif` | [Convert video to GIF](/api/tools/endpoints) |
+| `POST` | `/api/tools/compress-video` | [Compress a video](/api/tools/endpoints) |
+| `POST` | `/api/tools/pdf-to-images` | [Convert PDF to images](/api/tools/endpoints) |
+| `GET` | `/api/tools/result/:jobId/:filename` | [Download a converted file](/api/tools/endpoints) |
+| `POST` | `/api/tools/add-to-kiosk` | [Add converted file to playlist](/api/tools/endpoints) |
+| `DELETE` | `/api/tools/job/:jobId` | [Clean up a tool job](/api/tools/endpoints) |

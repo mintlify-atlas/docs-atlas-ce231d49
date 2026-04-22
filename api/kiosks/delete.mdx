@@ -1,0 +1,48 @@
+---
+title: "DELETE /api/kiosks/:id — Delete a kiosk permanently"
+description: "Permanently delete a kiosk and all its associated media files from disk. This action cannot be undone and removes all playlist items too."
+---
+
+Deletes a kiosk by ID along with all its uploaded media files on disk and every playlist item record in the database. This action is immediate and irreversible — there is no soft delete or recycle bin.
+
+<Warning>
+  Deleting a kiosk permanently removes all media files stored in `uploads/<slug>/`. This cannot be undone. Download any files you want to keep before deleting.
+</Warning>
+
+## Request
+
+```bash
+DELETE /api/kiosks/:id
+```
+
+<ParamField path="id" type="integer" required>
+  The numeric ID of the kiosk to delete.
+</ParamField>
+
+## Example
+
+```bash
+curl -X DELETE http://localhost:3001/api/kiosks/1
+```
+
+## Response
+
+```json
+{ "ok": true }
+```
+
+## What gets deleted
+
+When a kiosk is deleted, the following are removed:
+
+| Item | Details |
+|------|---------|
+| Kiosk record | Removed from the `kiosks` table |
+| Playlist items | All `kiosk_items` rows for this kiosk (cascade delete) |
+| Upload folder | `uploads/<slug>/` directory and all files inside it |
+
+## Error responses
+
+| Status | Body | Reason |
+|--------|------|--------|
+| `404` | `{ "error": "Kiosko no encontrado" }` | No kiosk with that ID exists |

@@ -1,0 +1,91 @@
+---
+title: 'Upload media files to a kiosk playlist'
+description: 'Add images and videos to a kiosk by uploading up to 20 files at once — learn supported formats, the 200 MB default limit, and how files are named on disk.'
+keywords: ['upload', 'media', 'images', 'video', 'MIME type', 'file size', 'kiosplay', 'multer']
+---
+
+Kiosplay accepts images and videos through the upload zone on each kiosk's edit page. Files are stored on disk under the kiosk's slug folder, added to the bottom of the playlist, and immediately available to the player. You can upload up to 20 files in a single request.
+
+## Supported file types
+
+The server validates every uploaded file against an allowlist of MIME types. Files with any other MIME type are rejected before they reach disk.
+
+| MIME type | Category | Common extension(s) |
+|-----------|----------|---------------------|
+| `image/jpeg` | Image | `.jpg`, `.jpeg` |
+| `image/jpg` | Image | `.jpg` |
+| `image/png` | Image | `.png` |
+| `image/gif` | Image | `.gif` |
+| `image/webp` | Image | `.webp` |
+| `video/mp4` | Video | `.mp4` |
+| `video/webm` | Video | `.webm` |
+| `video/ogg` | Video | `.ogv`, `.ogg` |
+| `video/quicktime` | Video | `.mov` |
+
+## Upload limits
+
+<Warning>
+  The default maximum file size is **200 MB per file**, controlled by the `MAX_FILE_SIZE_MB` environment variable in `server/.env`. If you are running Kiosplay behind Nginx, the `client_max_body_size` directive in your Nginx config must be set to the same value or higher, otherwise Nginx will reject large uploads before they reach the Node.js process.
+</Warning>
+
+- **Files per request:** up to **20** files in a single `multipart/form-data` POST.
+- **File size per file:** configurable via `MAX_FILE_SIZE_MB` (default `200`).
+- **Total request size:** limited by both `MAX_FILE_SIZE_MB` and your reverse proxy configuration.
+
+To change the per-file limit, update `server/.env`:
+
+```env
+MAX_FILE_SIZE_MB=500
+```
+
+## How to upload files
+
+Navigate to `/admin/kiosk/:id` (click **Edit** on a kiosk from the dashboard). The **Upload files** section contains a drag-and-drop zone.
+
+- **Drag and drop** — drag one or more files from your file manager onto the drop zone.
+- **Click to browse** — click the drop zone to open a file picker. Hold Shift or Ctrl/Cmd to select multiple files.
+
+After you drop or select files, Kiosplay filters out any that have unsupported MIME types, then sends the valid files to `POST /api/kiosks/:id/items/upload`. A progress message appears below the drop zone while the upload is in progress. When complete, the playlist list refreshes automatically with the new items appended at the end.
+
+## How files are stored on disk
+
+Uploaded files are stored at:
+
+```
+uploads/<slug>/<sanitized-filename>-<timestamp>-<random>.<ext>
+```
+
+For example, uploading `My Photo 2024.jpg` to a kiosk with slug `reception` produces a path similar to:
+
+```
+uploads/reception/My_Photo_2024-1714000000000-482931.jpg
+```
+
+<Note>
+  The sanitization step replaces every character that is not a letter, digit, dot, hyphen, or underscore with an underscore, then collapses consecutive underscores into one. The base name is also truncated to 100 characters. This prevents path-traversal issues and filesystem errors caused by special characters in filenames. The original filename is preserved separately in the `originalName` database column and displayed in the admin UI.
+</Note>
+
+The timestamp and random suffix make every stored filename unique, so uploading two files with the same original name never causes a collision.
+
+## After upload: playlist position
+
+New items are inserted at the **end** of the playlist. Each item receives a `sortOrder` value equal to the current highest `sortOrder` in the playlist plus one (starting from 0 if the playlist is empty). If you upload five files at once they are appended in the order they were submitted, numbered consecutively.
+
+To move an item earlier in the playlist, use the **↑** button in the playlist editor after the upload completes.
+
+## Deleting an uploaded file
+
+Click the **✕** button on an item row in the playlist editor. This calls `DELETE /api/items/:id`, which removes the physical file from disk and deletes the database record. The deletion is permanent and cannot be undone.
+
+<Warning>
+  Deleting a kiosk also deletes its entire upload folder (`uploads/<slug>/`) and every file it contains. See [Kiosk management](/admin/kiosk-management) for details.
+</Warning>
+
+<CardGroup cols={2}>
+  <Card title="Playlist editor" icon="list" href="/admin/playlist-editor">
+    Reorder uploads, set image durations, and enable or disable items after uploading.
+  </Card>
+  <Card title="Kiosk management" icon="monitor" href="/admin/kiosk-management">
+    Create and configure the kiosk before uploading media to it.
+  </Card>
+</CardGroup>

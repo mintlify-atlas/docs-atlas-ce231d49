@@ -1,0 +1,86 @@
+---
+title: 'Manage kiosks in the Kiosplay admin panel'
+description: 'Learn how to create, edit, enable, disable, and delete kiosks from /admin, including slug rules and the effect of each destructive action.'
+keywords: ['kiosk', 'admin', 'slug', 'digital signage', 'kiosplay', 'manage screens']
+---
+
+The Kiosplay admin panel at `/admin` is the starting point for every screen you manage. From here you create kiosks, configure their public URLs, toggle them on and off, and remove them when they are no longer needed. Each kiosk maps to a unique slug that controls both its player URL and its upload folder on disk.
+
+## Navigating to the admin panel
+
+Open your browser and go to `/admin`. In development that is `http://localhost:5173/admin`; in production it is the root of your server (e.g. `https://your-domain.com/admin`).
+
+The dashboard lists every kiosk with its display name, slug, enabled/disabled status badge, and creation date. From each card you can **Edit**, **View** (opens the player in a new tab), or **Delete** the kiosk.
+
+## Creating a kiosk
+
+<Steps>
+  <Step title="Open the create dialog">
+    On the `/admin` dashboard, click **+ New kiosk**. A modal form appears with two fields: **Name** and **Slug (URL)**.
+  </Step>
+  <Step title="Enter a display name">
+    Type a human-readable name such as `Reception` or `Lobby Screen`. The name appears in the admin list and in the page breadcrumb when you edit the kiosk. It is required.
+  </Step>
+  <Step title="Set a slug">
+    The slug becomes the kiosk's public URL path and its upload folder name. You can leave this field blank and Kiosplay will generate a slug from the name automatically, or you can type one yourself.
+
+    <Note>
+      Slugs are processed with `slugify` using the options `lower: true` and `strict: true`. This means the final slug is always lowercase and contains only letters, numbers, and hyphens — any other characters are stripped or replaced. The following slugs are reserved and cannot be used: `api`, `admin`, `uploads`, `static`. Each slug must also be unique across all kiosks.
+    </Note>
+  </Step>
+  <Step title="Submit the form">
+    Click **Create**. Kiosplay sends a `POST /api/kiosks` request. If the slug is valid and unique, you are redirected to the playlist editor at `/admin/kiosk/:id` where you can start uploading media.
+  </Step>
+</Steps>
+
+## Editing a kiosk
+
+Navigate to a kiosk's edit page from the dashboard by clicking **Edit** on its card, or go directly to `/admin/kiosk/:id`. The **Configuration** section at the top of the page lets you update three fields:
+
+| Field | Description |
+|-------|-------------|
+| **Name** | The display name shown in the admin list. Changing it does not affect the player URL. |
+| **Slug** | The URL path for the kiosk player and the name of its upload folder. See the slug rules above. |
+| **Active** | A checkbox that controls whether the kiosk is publicly accessible. Unchecking it marks the kiosk as disabled. |
+
+Click **Save** to apply changes via `PUT /api/kiosks/:id`.
+
+<Note>
+  When you change a kiosk's slug, Kiosplay automatically renames the upload folder on disk from `uploads/<old-slug>/` to `uploads/<new-slug>/` and updates every file path stored in the database. You do not need to re-upload any files.
+</Note>
+
+## Enabling and disabling a kiosk
+
+Use the **Active** checkbox in the Configuration section to toggle a kiosk's visibility. When a kiosk is disabled:
+
+- Its player page at `/<slug>` returns no data to the browser.
+- The admin list shows an **Inactive** badge on the kiosk card.
+- All media files and playlist data are preserved — you can re-enable the kiosk at any time.
+
+This is the recommended way to take a kiosk offline temporarily without losing any content.
+
+## Deleting a kiosk
+
+<Warning>
+  Deleting a kiosk is irreversible. Kiosplay removes all uploaded media files from disk (the entire `uploads/<slug>/` folder), deletes all playlist items from the database, and deletes the kiosk record itself. There is no undo. Make sure you no longer need the kiosk or its files before proceeding.
+</Warning>
+
+To delete a kiosk, click **Delete** on its card in the `/admin` dashboard. A confirmation dialog shows the kiosk name and warns that all files will be deleted. Confirm to proceed.
+
+## The kiosk list view
+
+The dashboard shows all kiosks ordered by creation date (newest first). Each card displays:
+
+- **Name** — the display name you chose
+- **Slug** — the URL path shown as `/<slug>`
+- **Status badge** — **Active** (green) or **Inactive** (grey)
+- **Created date** — when the kiosk was first created
+
+<CardGroup cols={2}>
+  <Card title="Playlist editor" icon="list" href="/admin/playlist-editor">
+    Reorder items, set display durations, and enable or disable individual media files.
+  </Card>
+  <Card title="Media upload" icon="upload" href="/admin/media-upload">
+    Upload images and videos to a kiosk playlist, including supported formats and size limits.
+  </Card>
+</CardGroup>

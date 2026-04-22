@@ -1,0 +1,79 @@
+---
+title: "POST /api/kiosks/:id/items/upload — Upload media files"
+description: "Upload up to 20 image or video files to a kiosk playlist using multipart/form-data. Files are stored in uploads/<slug>/ and appended to the playlist."
+---
+
+Upload one or more media files to a kiosk's playlist. Files are stored in the kiosk's dedicated upload folder (`uploads/<slug>/`) with a sanitized, unique filename. Uploaded items are automatically appended to the end of the playlist in the order they were received.
+
+## Request
+
+```bash
+POST /api/kiosks/:id/items/upload
+Content-Type: multipart/form-data
+```
+
+<ParamField path="id" type="integer" required>
+  The numeric ID of the kiosk to upload files to.
+</ParamField>
+
+<ParamField body="files" type="file[]" required>
+  One or more files to upload. Use the field name `files`. Up to 20 files per request.
+</ParamField>
+
+## Supported file types
+
+| MIME type | Type | Extensions |
+|-----------|------|------------|
+| `image/jpeg` | image | .jpg, .jpeg |
+| `image/png` | image | .png |
+| `image/gif` | image | .gif |
+| `image/webp` | image | .webp |
+| `video/mp4` | video | .mp4 |
+| `video/webm` | video | .webm |
+| `video/ogg` | video | .ogg |
+| `video/quicktime` | video | .mov |
+
+<Note>
+  The maximum file size is controlled by the `MAX_FILE_SIZE_MB` environment variable (default: 200 MB). If deploying behind Nginx, ensure `client_max_body_size` is set to at least the same value.
+</Note>
+
+## Example
+
+```bash
+curl -X POST http://localhost:3001/api/kiosks/1/items/upload \
+  -F "files=@/path/to/banner.jpg" \
+  -F "files=@/path/to/promo.mp4"
+```
+
+## Response
+
+Returns HTTP `201` with an array of created playlist item objects.
+
+```json
+[
+  {
+    "id": 5,
+    "kioskId": 1,
+    "type": "image",
+    "filename": "banner-1705312200000-456789.jpg",
+    "originalName": "banner.jpg",
+    "filePath": "/reception/banner-1705312200000-456789.jpg",
+    "mimeType": "image/jpeg",
+    "size": 204800,
+    "durationSeconds": 5,
+    "sortOrder": 4,
+    "enabled": 1,
+    "createdAt": "2024-01-15 11:00:00",
+    "updatedAt": "2024-01-15 11:00:00"
+  }
+]
+```
+
+## Error responses
+
+| Status | Body | Reason |
+|--------|------|--------|
+| `400` | `{ "error": "No se recibieron archivos" }` | No files in the request |
+| `400` | `{ "error": "Tipo de archivo no permitido: ..." }` | Unsupported MIME type |
+| `400` | `{ "error": "File too large" }` | File exceeds MAX_FILE_SIZE_MB |
+| `404` | `{ "error": "Kiosko no encontrado" }` | No kiosk with that ID |
